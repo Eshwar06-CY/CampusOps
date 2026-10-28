@@ -1,2 +1,1 @@
 """CampusOps backend application package."""
-

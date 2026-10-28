@@ -1,7 +1,7 @@
 # CampusOps — Implementation Status & Governance Record
 
-**Last updated:** 28 October 2026  
-**Status:** Development Slice 1 (Minimal Frontend/Backend Scaffolds) completed with passing automated tests. Application development active for controlled increment slices; production pilot and real participant data remain **NO-GO**.  
+**Last updated:** 28 October 2026<br>
+**Status:** Development Slice 1 (Minimal Frontend/Backend Scaffolds) completed and verified via maintenance review with passing automated tests. Application development active for controlled increment slices; production pilot and real participant data remain **NO-GO**.<br>
 **Working directory:** `D:\Antigravity_Projects\CampusOps`
 
 ---
@@ -28,7 +28,7 @@ The following runtime and compiler versions were directly verified through CLI e
 | **Python (System)** | `python --version` | `Python 3.13.9` | Primary interpreter at `D:\anaconda3\python.exe`. |
 | **Python (Selected)**| `py -3.13 --version`| `Python 3.13.9` | Selected verified interpreter for `backend/.venv`. |
 | **Python (Installed)**| `py -3.14 --version`| `Python 3.14.6` | Detected at `AppData\Local\Python\pythoncore-3.14-64\python.exe`. Python 3.13 preferred per pre-flight rule. |
-| **Git** | `git --version` | `2.54.0.windows.1` | Branch `main`, clean working tree. |
+| **Git** | `git --version` | `2.54.0.windows.1` | Baseline commit `1f099a8`, clean branch `main`. |
 
 ---
 
@@ -69,9 +69,8 @@ In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every
   collected 1 item
 
   tests/test_health.py::test_health_check PASSED [100%]
-  ======================== 1 passed, 1 warning in 0.45s =========================
+  ======================== 1 passed, 1 warning in 0.50s =========================
   ```
-- **Warning note:** Starlette emitted a deprecation notice regarding `httpx` with `TestClient` in favor of future `httpx2`. Test passed cleanly.
 
 ### 4.2 Frontend Test Execution
 - **Command:** `npm test` (running `vitest run` inside `frontend/`)
@@ -79,11 +78,11 @@ In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every
   ```text
   RUN  v5.0.5 D:/Antigravity_Projects/CampusOps/frontend
 
-  ✓ src/App.test.tsx (2 tests) 219ms
+  ✓ src/App.test.tsx (2 tests) 158ms
 
   Test Files  1 passed (1)
        Tests  2 passed (2)
-    Duration  1.90s
+    Duration  1.66s
   ```
 
 ### 4.3 Frontend Production Build
@@ -98,49 +97,29 @@ In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every
   dist/index.html                   0.45 kB │ gzip:  0.29 kB
   dist/assets/index-DUfPwTjg.css    2.24 kB │ gzip:  0.99 kB
   dist/assets/index-CNf_Nd2m.js   219.92 kB │ gzip: 68.76 kB
-  ✓ built in 361ms
+  ✓ built in 161ms
   ```
 
 ---
 
-## 5. Repository File Inventory & Git Status
+## 5. Maintenance Review & Hygiene Verification
 
-Running `git status -u` confirms all generated directories (`backend/.venv/`, `frontend/node_modules/`, `frontend/dist/`, `.pytest_cache/`, `__pycache__/`) are safely ignored:
+Following baseline commit `1f099a8`, a narrow maintenance review was conducted:
 
-```text
-Untracked files:
-	.gitignore
-	AGENTS.md
-	backend/.env.example
-	backend/app/__init__.py
-	backend/app/main.py
-	backend/pytest.ini
-	backend/requirements.txt
-	backend/tests/__init__.py
-	backend/tests/test_health.py
-	docs/implementation/IMPLEMENTATION_STATUS.md
-	frontend/.gitignore
-	frontend/.oxlintrc.json
-	frontend/README.md
-	frontend/index.html
-	frontend/package-lock.json
-	frontend/package.json
-	frontend/public/favicon.svg
-	frontend/public/icons.svg
-	frontend/src/App.css
-	frontend/src/App.test.tsx
-	frontend/src/App.tsx
-	frontend/src/assets/hero.png
-	frontend/src/assets/react.svg
-	frontend/src/assets/vite.svg
-	frontend/src/index.css
-	frontend/src/main.tsx
-	frontend/src/test/setup.ts
-	frontend/tsconfig.app.json
-	frontend/tsconfig.json
-	frontend/tsconfig.node.json
-	frontend/vite.config.ts
-```
+### 5.1 `requirements.txt` Byte-Level Diagnosis & Remediation
+- **Diagnosis:** The file was originally written via Windows PowerShell redirection (`>`), resulting in **UTF-16LE encoding with a 2-byte BOM (`0xFF 0xFE`)** and alternating NUL bytes (`0x00`) for all ASCII characters (1042 bytes). Git detected the NUL bytes and classified the file as `Binary files a/backend/requirements.txt and b/backend/requirements.txt differ`.
+- **Remediation:** Converted to standard UTF-8 text without BOM (519 bytes, Unix newlines). All 28 dependency pins were preserved identically.
+- **Verification:** Verified byte-level absence of NUL bytes (`b'\x00' not in raw`) and absence of BOM. Git now processes the file as standard text.
+
+### 5.2 Dependency & Compatibility Check (`pip check`)
+- **Command:** `backend\.venv\Scripts\pip.exe check`
+- **Result:** `No broken requirements found.` (exit code 0).
+- **Warning Assessment:** The observed `StarletteDeprecationWarning: Using 'httpx' with 'starlette.testclient' is deprecated; install 'httpx2' instead` originates within `starlette.testclient` in Starlette 1.10.0. All dependencies remain compatible, no requirements are broken, and per strict boundaries no unverified packages were introduced.
+
+### 5.3 Git Whitespace & EOF Blank Line Remediation
+- **Diagnosis:** `git diff c63144b..1f099a8 --check` reported extra blank lines at EOF across 8 files and trailing double-space line breaks in Markdown files (`AGENTS.md`, `IMPLEMENTATION_STATUS.md`).
+- **Remediation:** Removed extraneous blank lines at EOF. Converted Markdown trailing double spaces to `<br>` tags to preserve visual line breaks without generating Git whitespace errors.
+- **Verification:** `git diff --check` executed with **exit code 0** (zero whitespace errors).
 
 ---
 
@@ -160,7 +139,7 @@ Untracked files:
 
 ## 7. Recommended Next Implementation Slice (Slice 2)
 
-With the minimal scaffolds and automated test harnesses proven, the recommended next slice is:
+With the minimal scaffolds, test harnesses, and repository hygiene fully verified, the recommended next slice is:
 
 ### Slice 2: Identity, Organization Workspace & Scoped Roles (Synthetic Data Only)
 1. **Domain Data Models:** Define logical/physical models for `User`, `Organization`, `Membership`, and scoped `RoleAssignment` using SQLAlchemy and Pydantic v2.

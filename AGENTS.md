@@ -1,7 +1,7 @@
 # CampusOps — Agent Governance and Project Rules
 
-**Document version:** 1.0  
-**Effective date:** 28 October 2026  
+**Document version:** 1.0<br>
+**Effective date:** 28 October 2026<br>
 **Scope:** Universal engineering and operational rules for AI agents and human contributors working in `D:\Antigravity_Projects\CampusOps`.
 
 ---
@@ -186,4 +186,3 @@ A slice or feature is done only when:
    - Verify that replaying an invitation acceptance or external import payload does not duplicate memberships or registrations.
 4. **Degraded Connectivity Testing:**
    - Verify system behavior and error messaging under network timeouts and failed API requests before pilot deployment.
-
