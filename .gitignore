@@ -31,6 +31,9 @@ coverage/
 .env.*.local
 *.pem
 *.key
+*.db
+*.sqlite
+*.sqlite3
 
 # IDE and OS
 .vscode/
