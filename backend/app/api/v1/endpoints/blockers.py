@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth.principal import get_current_user
 from app.database import get_db
 from app.models.organization import Organization, OrganizationMembership
+from app.models.task import OperationalBlocker
 from app.models.user import UserProfile
 from app.schemas.blocker import (
     OperationalBlockerCreateRequest,
@@ -58,6 +59,17 @@ def _ensure_org_access(db: Session, user: UserProfile, organization_id: uuid.UUI
                 detail="Organization not found.",
             )
     return org
+
+
+def _ensure_blocker_in_org(db: Session, blocker_id: uuid.UUID, organization_id: uuid.UUID) -> OperationalBlocker:
+    """Retrieves operational blocker asserting it belongs to the given organization."""
+    blocker = db.get(OperationalBlocker, blocker_id)
+    if not blocker or blocker.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Blocker not found.",
+        )
+    return blocker
 
 
 @router.post(
@@ -135,6 +147,7 @@ def get_organization_blocker(
 ) -> OperationalBlockerDetailResponse:
     """Retrieves an operational blocker with its audit history."""
     _ensure_org_access(db, current_user, organization_id)
+    _ensure_blocker_in_org(db, blocker_id, organization_id)
     try:
         return get_operational_blocker(
             db=db,
@@ -161,6 +174,7 @@ def update_organization_blocker(
 ) -> OperationalBlockerResponse:
     """Updates permitted metadata on an open operational blocker."""
     _ensure_org_access(db, current_user, organization_id)
+    _ensure_blocker_in_org(db, blocker_id, organization_id)
     try:
         return update_operational_blocker(
             db=db,
@@ -170,6 +184,7 @@ def update_organization_blocker(
             description=payload.description,
             priority=payload.priority,
             owner_membership_id=payload.owner_membership_id,
+            organization_id=organization_id,
         )
     except (OperationalBlockerNotFoundError, ScopeIntegrityError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blocker not found.")
@@ -192,6 +207,7 @@ def resolve_organization_blocker(
 ) -> OperationalBlockerResponse:
     """Resolves an operational blocker with mandatory resolution note."""
     _ensure_org_access(db, current_user, organization_id)
+    _ensure_blocker_in_org(db, blocker_id, organization_id)
     try:
         return resolve_operational_blocker(
             db=db,
@@ -199,6 +215,7 @@ def resolve_organization_blocker(
             blocker_id=blocker_id,
             resolution_note=payload.resolution_note,
             status=payload.status,
+            organization_id=organization_id,
         )
     except (OperationalBlockerNotFoundError, ScopeIntegrityError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blocker not found.")
@@ -221,12 +238,14 @@ def reopen_organization_blocker(
 ) -> OperationalBlockerResponse:
     """Reopens a resolved or wont_fix operational blocker."""
     _ensure_org_access(db, current_user, organization_id)
+    _ensure_blocker_in_org(db, blocker_id, organization_id)
     try:
         return reopen_operational_blocker(
             db=db,
             user=current_user,
             blocker_id=blocker_id,
             reason=payload.reason,
+            organization_id=organization_id,
         )
     except (OperationalBlockerNotFoundError, ScopeIntegrityError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blocker not found.")

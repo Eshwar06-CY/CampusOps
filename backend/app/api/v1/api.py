@@ -9,6 +9,8 @@ from app.api.v1.endpoints import (
     notifications,
     organizations,
     programs,
+    public_registration,
+    staff_registration,
     tasks,
 )
 
@@ -23,3 +25,5 @@ api_router.include_router(invitations.router, tags=["Invitations"])
 api_router.include_router(tasks.router, tags=["Tasks"])
 api_router.include_router(blockers.router, tags=["Blockers"])
 api_router.include_router(notifications.router, tags=["Notifications"])
+api_router.include_router(public_registration.router, tags=["Public Registration"])
+api_router.include_router(staff_registration.router, tags=["Staff Registration & Attendance"])

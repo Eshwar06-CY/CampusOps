@@ -175,7 +175,14 @@ class Task(Base):
 
     @property
     def active_assignee(self) -> Optional["TaskAssignee"]:
-        return next((a for a in self.assignees if a.assignment_status == "active"), None)
+        return next(
+            (
+                a for a in self.assignees
+                if a.assignment_status == "active"
+                and (not a.membership or (a.membership.membership_status == "active" and a.membership.removed_at is None))
+            ),
+            None,
+        )
 
     def __repr__(self) -> str:
         return f"<Task id={self.id} title={self.title!r} status={self.status} scope={self.scope_type}:{self.scope_id}>"

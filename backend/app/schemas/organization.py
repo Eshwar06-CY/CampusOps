@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.user import RoleSummaryResponse
 
 
 class OrganizationCreateRequest(BaseModel):
@@ -40,3 +42,17 @@ class OrganizationVerifyRequest(BaseModel):
 
     decision: str = Field(..., pattern="^(verified|rejected)$")
     note: Optional[str] = Field(None, max_length=1000)
+
+
+class OrganizationMemberResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    user_id: uuid.UUID
+    display_name: str
+    email: str
+    email_masked: bool = False
+    membership_status: str
+    joined_at: datetime
+    roles: List[RoleSummaryResponse] = []

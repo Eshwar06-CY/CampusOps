@@ -33,6 +33,15 @@ ACTION_CREATE_BLOCKER = "blocker:create"
 ACTION_VIEW_BLOCKER = "blocker:view"
 ACTION_RESOLVE_BLOCKER = "blocker:resolve"
 
+# Slice 5B: Registration, Ticketing, and Attendance action constants
+ACTION_MANAGE_REGISTRATION_SETTINGS = "registration:manage_settings"
+ACTION_VIEW_REGISTRATIONS = "registration:view"
+ACTION_CHECK_IN = "attendance:check_in"
+ACTION_CORRECT_CHECK_IN = "attendance:correct"
+ACTION_VIEW_ATTENDEE_CONTACT = "attendee:view_contact"
+ACTION_EXPORT_PARTICIPANTS = "attendee:export"
+
+
 
 def is_active_platform_admin(db: Session, user_id: uuid.UUID) -> bool:
     """Check if a user is an active platform administrator with an active, verified user account."""
@@ -248,6 +257,12 @@ def can_perform(
                     ACTION_CREATE_BLOCKER,
                     ACTION_VIEW_BLOCKER,
                     ACTION_RESOLVE_BLOCKER,
+                    ACTION_MANAGE_REGISTRATION_SETTINGS,
+                    ACTION_VIEW_REGISTRATIONS,
+                    ACTION_CHECK_IN,
+                    ACTION_CORRECT_CHECK_IN,
+                    ACTION_VIEW_ATTENDEE_CONTACT,
+                    ACTION_EXPORT_PARTICIPANTS,
                 ):
                     return True
 
@@ -272,7 +287,17 @@ def can_perform(
                     ACTION_CREATE_BLOCKER,
                     ACTION_VIEW_BLOCKER,
                     ACTION_RESOLVE_BLOCKER,
+                    ACTION_MANAGE_REGISTRATION_SETTINGS,
+                    ACTION_VIEW_REGISTRATIONS,
+                    ACTION_CHECK_IN,
+                    ACTION_CORRECT_CHECK_IN,
+                    ACTION_VIEW_ATTENDEE_CONTACT,
+                    ACTION_EXPORT_PARTICIPANTS,
                 ):
+                    return True
+
+            elif role == "REGISTRATION_STAFF":
+                if is_verified and action in (ACTION_VIEW_REGISTRATIONS, ACTION_CHECK_IN):
                     return True
 
             elif role == "COORDINATOR":
@@ -384,7 +409,16 @@ def can_perform(
                         ACTION_CREATE_BLOCKER,
                         ACTION_VIEW_BLOCKER,
                         ACTION_RESOLVE_BLOCKER,
+                        ACTION_MANAGE_REGISTRATION_SETTINGS,
+                        ACTION_VIEW_REGISTRATIONS,
+                        ACTION_CHECK_IN,
+                        ACTION_CORRECT_CHECK_IN,
+                        ACTION_VIEW_ATTENDEE_CONTACT,
+                        ACTION_EXPORT_PARTICIPANTS,
                     ):
+                        return True
+                elif role == "REGISTRATION_STAFF":
+                    if action in (ACTION_VIEW_REGISTRATIONS, ACTION_CHECK_IN):
                         return True
                 elif role == "COORDINATOR":
                     if action in (

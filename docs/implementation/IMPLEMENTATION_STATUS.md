@@ -1,7 +1,7 @@
 # CampusOps — Implementation Status & Governance Record
 
-**Last updated:** 29 October 2026<br>
-**Status:** Development Slice 4B Task Management & Operational Blocker REST APIs (Prompt 16) completed with 196 passing backend tests and 2 passing frontend tests. REST APIs implemented for task creation, listing, assignment, deadline adjustments, proof submissions, reviews, operational blockers, and in-app notifications. Additive decision D-SLICE4-01 adopted in Decision Log v1.6 Addendum. Application development active for controlled increment slices; production pilot and real participant data remain **NO-GO**.<br>
+**Last updated:** 30 October 2026<br>
+**Status:** Phase 1.1 Organization Management Closure (Prompt 27) completed and verified. Delivered: (1) Secure URL fragment invitation routing (`#token=...`), ephemeral component memory extraction, immediate URL scrubbing via `history.replaceState` before any network call, legacy query parameter rejection (`?token=...`) with security alert notice and manual-entry fallback, and zero token persistence in web storage; (2) Organization-wide member directory API (`GET /api/v1/organizations/{organization_id}/members`) with tenant isolation, `ACTION_VIEW_ORG_PROFILE` gating, tiered contact privacy masking (`email_masked: bool`), and pagination; (3) Organization-wide invitation directory API (`GET /api/v1/organizations/{organization_id}/invitations`) gated by role management authority (`ACTION_MANAGE_ROLES` / `ACTION_INVITE_MEMBER`), dynamic expiration evaluation, and strict credential exclusion; (4) Frontend directory integration in `MemberDirectoryTable.tsx`, `WorkspaceOverview.tsx`, and `InvitationAcceptView.tsx` with live API-backed roster, status filtering, privacy badges, and pagination; (5) Reconciled canonical technical gate register (TG-01 to TG-07) across all documentation. Total test suite expanded to **310 passing backend tests** (5 new integration tests added) and **59 passing frontend tests** (6 new automated tests added); production build clean (145ms). Application development active; production pilot remains **NO-GO**.<br>
 **Working directory:** `D:\Antigravity_Projects\CampusOps`
 
 ---
@@ -119,6 +119,116 @@ CampusOps development is progressing across strictly bounded, verified increment
   - **URL Safety Boundary:** Added 2048-character length limit in `validate_evidence_url` while affirming zero server-side fetch execution.
   - **Testing Coverage:** 14 new comprehensive audit regression tests in `backend/tests/test_slice_4a_security_audit.py`. Total backend test suite now stands at **173 passing tests**.
   - **Deliverable:** Created `docs/implementation/SLICE_4A_SECURITY_AUDIT_REPORT.md`.
+- **Development Slice 4B (Task Management & Operational Blocker REST APIs Completed):**
+  - Implemented 17 REST API endpoints across tasks, deadline changes, proof reviews, staff-only operational blockers, and in-app notifications.
+  - Adopted decision `D-SLICE4-01` in `Consolidated Documentation/CampusOps_Decision_Log_v1.6_Addendum.md` cementing single active task assignment.
+  - Added 22 HTTP integration tests across `test_api_tasks.py` and `test_api_blockers_notifications.py`. Total backend test suite reached 196 passing tests.
+  - Deliverables: `docs/implementation/SLICE_4B_API_CONTRACT.md` and `docs/implementation/SLICE_4B_IMPLEMENTATION_REPORT.md`.
+- **Slice 4B Security, Authorization & Transaction Audit (Prompt 17 Completed):**
+  - **Route-by-Route Matrix Review:** Audited all 17 REST API endpoints against the Role and Permission Matrix.
+  - **Cross-Tenant Anti-Enumeration & Boundary Hardening:** Identified and resolved blocker route gap where `PATCH`, `resolve`, and `reopen` lacked tenant ID verification; added `_ensure_blocker_in_org` ensuring uniform HTTP 404 responses for alien blockers.
+  - **Worker Authority Lifecycle:** Hardened `start_task`, `submit_task_evidence`, and deadline notifications to assert active membership status, invalidating removed members immediately.
+  - **Self-Review Prohibition & Replay Protection:** Verified submitter and active worker self-review rejection (HTTP 400) even with elevated roles; verified conditional update double-review rejection.
+  - **Testing Coverage:** 14 new comprehensive security audit regression tests in `backend/tests/test_slice_4b_security_audit.py`. Total backend test suite now stands at **210 passing tests**.
+  - **Deliverable:** Created `docs/implementation/SLICE_4B_SECURITY_AUDIT_REPORT.md`.
+- **Development Slice 5A (Participant Registration, Ticketing & Attendance Architecture Completed):**
+  - **Comprehensive Architectural Blueprint:** Formulated domain architecture, boundary constraints, privacy tiers, and capacity mechanics across 4 primary engineering specifications in `docs/implementation/`:
+    1. `SLICE_5_SCOPE_AND_ARCHITECTURE_PLAN.md`: Clarified non-payment admission passes, individual check-in rule (scanning a team pass marks ONLY the specific individual as present), event-scoped registration model, capacity accounting, tiered privacy disclosure, and offline sync readiness.
+    2. `SLICE_5_SCHEMA_RELATIONSHIP_PLAN.md`: Defined 7 normalized relational tables (`event_registration_settings`, `registrations`, `participants`, `registration_participants`, `tickets`, `check_ins`, `check_in_corrections`), composite foreign keys enforcing multi-tenancy, check constraints, partial unique indexes (`uq_participants_event_email`, `uq_ticket_participant_active`, `uq_check_in_event_participant`), and Alembic migration sequence (`b7c8d9e0f1a2` revising `a6b7c8d9e0f1`).
+    3. `SLICE_5_API_CONTRACT_DRAFT.md`: Defined 18 REST endpoints across public namespace (`/api/v1/public/events/{key}/...` with unguessable registration keys, rate limiting, and honeypot bot defense) and staff namespace (`/api/v1/organizations/{org_id}/events/{event_id}/...`), covering settings, solo/team registration, pass verification, QR and manual check-ins, check-in voids with mandatory audit reason, summaries, and CSV export.
+    4. `SLICE_5_ACCEPTANCE_TEST_PLAN.md`: Specified 48 exhaustive acceptance test cases across 8 functional and security categories (solo/team happy paths, negative boundaries, sibling event isolation, concurrency races, privacy masking, check-in void audit integrity, and Alembic roundtrips).
+  - **Formal Decision Closure:** Adopted decisions D-SLICE5-01 through D-SLICE5-04 in `Consolidated Documentation/CampusOps_Decision_Log_v1.7_Addendum.md`:
+    - `D-SLICE5-01`: Capacity measured in individual human bodies (`len(participants)`), with atomic concurrency reservations.
+    - `D-SLICE5-02`: Ticketing defined as digital non-payment admission passes; zero PII embedded in QR codes.
+    - `D-SLICE5-03`: Registrations and check-ins strictly scoped to individual events (standalone or child events); program-wide pass bundling deferred.
+    - `D-SLICE5-04`: Check-in voids and corrections restricted to managers (`PRIMARY_ADMIN`, `OFFICE_BEARER`, `EVENT_LEAD`) with mandatory immutable audit log in `check_in_corrections`.
+  - **Design-Only Discipline Preserved:** Zero application code, database migrations, REST endpoints, frontend screens, or payment integrations implemented. Total backend test suite maintained at **210 passing tests**.
+- **Development Slice 5B (Participant Registration, Ticketing & Check-In Domain Foundation Completed):**
+  - **Baseline Inventory Resolution:** Independently verified collected test baseline before changes. While Prompt 19 noted the Slice 5A inventory summed to 202, dynamic pytest collection confirmed exactly 210 passing tests across 24 test files; arithmetic analysis revealed an 8-test file had been inadvertently omitted from manual arithmetic addition, confirming a true baseline of 210 tests.
+  - **Relational Domain Models (`backend/app/models/registration.py`):** Implemented 7 normalized SQLAlchemy 2.0 models:
+    1. `EventRegistrationSettings`: Event-level registration controls, capacity limit (`capacity_limit`), current confirmed count (`current_confirmed_count`), waitlist limit, window datetimes, and team size boundaries (`min_team_size`, `max_team_size`).
+    2. `Registration`: Transactional booking entity capturing `registration_type` (`solo` / `team`), `status` (`confirmed`, `waitlisted`, `cancelled`), `idempotency_key`, and contact details.
+    3. `Participant`: Normalized attendee records with name, email, phone, and optional academic affiliation. Index `ix_participants_event_email` is non-unique to allow shared contact emails across distinct participants (FA-007) while preventing duplicate members inside teams.
+    4. `RegistrationParticipant`: Association join table mapping participants to their parent registration, with `is_primary_contact` and `role_in_team`.
+    5. `Ticket`: Digital non-payment admission pass (`status`: `active`, `cancelled`, `revoked`, `expired`). Raw pass code is strictly non-persisted; stores SHA-256 hash `pass_code_hash`. Partial unique index `uq_ticket_participant_active` enforces strictly one active ticket per participant.
+    6. `CheckIn`: Attendance check-in record (`status`: `valid`, `voided`). Partial unique index `uq_check_in_event_participant` enforces at most one valid check-in per participant.
+    7. `CheckInCorrection`: Immutable audit ledger for check-in status corrections and voids per decision `D-SLICE5-04`.
+  - **Additive Alembic Migration (`b7c8d9e0f1a2`):** Created `b7c8d9e0f1a2_slice_5_registration_ticketing_and_attendance.py` with `down_revision = 'a6b7c8d9e0f1'`. Includes SQLite batch operations, composite foreign keys `(organization_id, event_id)` for tenant isolation, partial unique indexes, check constraints for enums and positive capacities, and complete downgrade/upgrade roundtrips verified in `test_migrations.py`.
+  - **Domain Services & Invariants (`backend/app/services/registration.py`):**
+    - Atomic Capacity Reservation: Capacity accounted strictly in individual human bodies (`len(participants)` per `D-SLICE5-01`). Evaluated via conditional atomic SQL update: `WHERE current_confirmed_count + :slots <= capacity_limit`, eliminating overselling race conditions.
+    - Solo & Team Registration: Validates registration window dates, team size limits, unique team names, and non-duplicate emails within a submission; supports idempotent re-submission via `idempotency_key`.
+    - Ticket Credential Security: Generates cryptographically secure pass codes (`CO-PASS-<HEX>`), stores strictly SHA-256 hashes, verifies passes with constant-time `hmac.compare_digest`, and issues replacement passes with atomic revocation.
+    - Attendance Check-In & Idempotency: Supports pass-code and manual roster check-ins; duplicate scans on already checked-in attendees safely return the existing check-in without mutating state; scanning team passes checks in only the individual participant.
+    - Manager-Only Check-In Correction (`D-SLICE5-04`): Voids and corrections restricted to manager authority (`ACTION_CORRECT_CHECK_IN`), requiring a mandatory explanation of at least 10 characters and recording an immutable entry in `CheckInCorrection`.
+    - Privacy Boundaries: Data-masking helpers (`mask_email`, `mask_phone`) and tiered roster retrieval protecting participant PII from non-administrative staff.
+  - **Permission Rules & Domain Errors:** Added 6 action constants (`ACTION_MANAGE_REGISTRATION_SETTINGS`, `ACTION_VIEW_REGISTRATIONS`, `ACTION_CHECK_IN`, `ACTION_CORRECT_CHECK_IN`, `ACTION_VIEW_ATTENDEE_CONTACT`, `ACTION_EXPORT_PARTICIPANTS`) in `backend/app/services/permissions.py` and 15 domain exceptions in `backend/app/services/errors.py`.
+  - **Testing Coverage:** 19 automated domain tests added in `backend/tests/test_slice_5b_registration_domain.py`, plus migration lifecycle verification in `test_migrations.py`. Total backend test suite reached **230 passing tests**.
+  - **Strict Scope Boundaries:** Zero REST APIs or frontend screens were introduced in this slice.
+  - **Deliverable:** Created `docs/implementation/SLICE_5B_DOMAIN_IMPLEMENTATION_REPORT.md`.
+- **Slice 5B Security, Authorization & Integrity Audit (Prompt 20 Completed & Hardened):**
+  - **Alembic Additive Hardening Migration (`c8d9e0f1a2b3`):** Upgraded `ix_registrations_idempotency` to partial unique index `uq_registrations_event_idempotency` (`['event_id', 'idempotency_key'] WHERE idempotency_key IS NOT NULL`) and added partial unique index `uq_event_reg_settings_key_hash` (`['registration_key_hash'] WHERE registration_key_hash IS NOT NULL`). Replaced indexes cleanly without editing migration history; upgrade/downgrade verified via `test_migrations.py`.
+  - **Credential Security & Rotation:** Proved 128-bit entropy in ticket pass codes (`CO-PASS-<HEX>`), non-persistence of raw tokens (SHA-256 only), constant-time comparison (`hmac.compare_digest`), absence of credentials in `__repr__`, and zero PII in passes. Implemented public key generator `generate_registration_key()` and added key rotation (`rotate_registration_key: bool = False`) in `update_registration_settings`.
+  - **Relational Cross-Tenant & Cross-Event Isolation:** Verified via direct SQL tests that composite foreign keys strictly block cross-tenant registrations, participants, and settings, and prevent cross-event ticket, registration-participant, and check-in associations at the database engine level.
+  - **Participant Identity & Shared Email Policy (FA-007):** Verified distinct `Participant` records, tickets, and check-in lifecycles for distinct individuals sharing an email address. Enforced team-member duplicate rejection in service and DB join tables.
+  - **Capacity Concurrency & Rollback:** Tested atomic conditional updates, strict all-or-nothing team reservations, transactional rollback on fault injection, exact cancellation releases (confirmed releases once, waitlisted never releases), and safe capacity reduction below current attendance.
+  - **Check-In & Void Audit Ledger (D-SLICE5-04):** Verified duplicate scan idempotency, database-enforced single valid check-in (`uq_check_in_event_participant`), rejection of cancelled/revoked attendees, manager-only void permissions, minimum 10-character reason constraint, and append-only audit trail in `check_in_corrections`.
+  - **Diagnostic Reconciliation Query:** Implemented `reconcile_event_registration_counts(db, event_id, auto_fix=False)` for operational auditability and drift auto-correction.
+  - **Testing Coverage:** 20 new comprehensive security audit regression tests in `backend/tests/test_slice_5b_security_audit.py` + 1 migration lifecycle test in `backend/tests/test_migrations.py`. Total backend test suite reached **251 passing tests**.
+  - **Deliverable:** Created `docs/implementation/SLICE_5B_SECURITY_AUDIT_REPORT.md`.
+- **Development Slice 5C (Participant Registration, Ticketing & Attendance REST APIs Completed):**
+  - **Public Participant Endpoints (`/api/v1/public/...`):**
+    - `GET /public/events/{registration_key}`: Event discovery, status (`open`, `closed`, `not_yet_open`, `ended`), registration format, team sizing rules, and real-time capacity availability.
+    - `POST /public/events/{registration_key}/registrations`: Self-service individual and team registrations with Pydantic v2 `extra="forbid"`, issuing digital passes with zero PII, and handling idempotent replays safely (`<REDACTED_AFTER_ISSUANCE>`) with 409 Conflict on payload divergence.
+    - `GET /public/events/{registration_key}/passes/{pass_code}`: Attendee pass display and QR payload verification (opaque high-entropy token, zero participant PII).
+    - `GET /public/events/{registration_key}/registrations/{confirmation_code}`: Unguessable capability registration lookup with privacy masking (no attendee emails or phone numbers exposed).
+    - `POST /public/events/{registration_key}/registrations/{confirmation_code}/cancel`: Public self-service cancellation with contact email identity verification, releasing capacity and invalidating passes.
+  - **Staff Operational Endpoints (`/api/v1/organizations/{org_id}/events/{event_id}/...`):**
+    - `GET` & `PUT .../registration-settings`: Manage registration status, capacity limits, format, scheduling windows, and key rotation.
+    - `GET .../registrations`: Lists registration headers with status and type filters.
+    - `POST .../registrations/walk-in`: Desk-assisted walk-in registration tagged `registration_channel = 'walk_in'`.
+    - `POST .../registrations/{id}/cancel`: Manager cancellation releasing confirmed capacity.
+    - `GET .../participants` & `GET .../participants/{id}`: Tiered attendee roster access. Desk volunteers (`REGISTRATION_STAFF`) receive masked contact details (`mask_email`, `mask_phone`). Unmasked contact info requires `ACTION_VIEW_ATTENDEE_CONTACT`.
+    - `PATCH .../participants/{id}`: Corrects attendee details (name, college, student ID).
+    - `POST .../participants/{id}/reissue-pass`: Atomically revokes prior passes and issues fresh admission pass credentials.
+    - `POST .../check-ins`: QR or manual check-in enforcing individual check-in rule (FA-005) and duplicate scan idempotency (`status: "already_checked_in"` without inflating attendance counts).
+    - `GET .../check-in-lookup`: Candidate search across attendee roster via ticket token, reference, name, or student ID.
+    - `POST .../check-ins/{id}/void`: Manager-only void/correction (`ACTION_CORRECT_CHECK_IN`) requiring >= 10 character explanation, restoring pass and decrementing attendance.
+    - `GET .../attendance-summary`: Real-time attendance metrics, attendance percentage, and team attendance breakdown (fully, partially, absent).
+    - `GET .../roster-export`: Streamed CSV download of attendee roster strictly gated by `ACTION_EXPORT_PARTICIPANTS`.
+  - **Testing Coverage:** 32 comprehensive integration tests added in `backend/tests/test_api_slice_5c_registration.py`. Total backend test suite now stands at **283 passing tests**.
+  - **Deliverables:** Created `docs/implementation/SLICE_5C_API_CONTRACT.md` and `docs/implementation/SLICE_5C_IMPLEMENTATION_REPORT.md`.
+- **Slice 5C Public API Security, Privacy & Transaction Audit (Prompt 22 Completed & Hardened):**
+  - **URL Credential Exposure Hardening:** Added body-based POST endpoints (`/passes/verify`, `/registrations/lookup`, `/registrations/cancel`) protecting bearer tokens from URL leakage in reverse proxy logs, browser histories, and referer headers.
+  - **CSV Formula Injection Sanitization (CWE-1236):** Hardened `/roster-export` by sanitizing all text cells against formula execution triggers (`=`, `+`, `-`, `@`, `\t`, `\r`).
+  - **Registration Header Contact Masking:** Hardened `GET .../registrations` to mask contact details for callers lacking `ACTION_VIEW_ATTENDEE_CONTACT`.
+  - **Testing Coverage:** 22 new security audit tests in `backend/tests/test_slice_5c_security_audit.py`. Total backend test suite reached **305 passing tests**.
+  - **Deliverable:** Created `docs/implementation/SLICE_5C_SECURITY_AUDIT_REPORT.md`.
+- **Development Slice 5D (Participant Registration & Event-Day Operations Frontend Completed):**
+  - **Public Participant Portal:** Implemented `EventOverview` with capacity indicators, `IndividualRegForm` (solo registration), `TeamRegForm` (dynamic team member sizing within min/max bounds and duplicate email rejection), `RegistrationConfirmation` with individual passes, and `RegistrationLookupModal` for capability lookup and self-service cancellation via POST request bodies.
+  - **Digital Admission Pass Display & SVG QR Generator:** Built zero-dependency pure TypeScript QR Code generator (`src/utils/qr.ts`) rendering scalable vector QR passes with zero PII in QR payloads. Safe recovery notice displayed if raw one-time tokens are redacted on browser reloads.
+  - **Staff Event Operations Hub:** Built `CheckInDesk` (pass code scan and 250ms debounced candidate search with duplicate scan idempotency), `ParticipantRoster` (searchable table with masked contact details and CSV download trigger), `AttendanceSummaryCard` (real-time headcounts, capacity ratios, and team arrival breakdowns), `RegistrationSettingsCard` (capacity limits and key rotation), `CheckInCorrectionModal` (manager-only check-in void requiring >= 10 char mandatory reason), and `ParticipantDetailModal` (atomic pass reissuance).
+  - **Fail-Closed Authentication Notice (`AuthUnavailableNotice`):** Formatted clear notice upon HTTP 401 when upstream identity provider remains unconfigured, maintaining strict deny-by-default boundary with zero mock login or client-side bypasses.
+  - **Design System & Accessibility:** Established design tokens in `theme.css` and component styles in `components.css` with dark mode support, semantic HTML/ARIA attributes, visible focus indicators, and mobile-responsive layouts.
+  - **Testing Coverage:** 23 passing tests across 5 Vitest test suites (`qr.test.ts`, `PublicRegistration.test.tsx`, `PassDisplay.test.tsx`, `StaffOperations.test.tsx`, `App.test.tsx`). Frontend production build verified clean (`tsc -b && vite build` in 219ms).
+  - **Deliverable:** Created `docs/implementation/SLICE_5D_FRONTEND_IMPLEMENTATION_REPORT.md`.
+- **Premium Product Experience & UX Quality Review (Completed):**
+  - **Design System Tokens & Theme:** Upgraded `theme.css` with Slate/Zinc neutrals, Operational Indigo brand palette, WCAG AA semantic feedback colors, layered elevation shadows, `--co-focus-ring` focus indicators, and `@media (prefers-reduced-motion: reduce)` override.
+  - **Component Styling & Print Stylesheet:** Added tabular figures (`tabular-nums`), segmented navigation switch, and dedicated `@media print` rules stripping navigation chrome, buttons, and dark ink waste for crisp ticket printing.
+  - **Accessible Vector Icon Suite:** Built 20+ accessible vector SVGs in `Icons.tsx` replacing platform emojis.
+  - **Global Non-Blocking Feedback:** Implemented `ToastProvider` and `useToast()` hook with auto-dismissal for check-ins, copies, pass reissues, and errors.
+  - **Layout Stability:** Built shimmer skeletons (`Skeleton.tsx`) eliminating Cumulative Layout Shift (CLS).
+  - **Desk Velocity Ergonomics:** Added global `/` shortcut for hardware barcode scanners and `ArrowDown`/`ArrowUp` + `Enter` navigation for search candidates in `CheckInDesk.tsx`.
+  - **Dialog Management:** Built focus trapping, focus restoration to previous trigger elements, and `Escape` key close handling in `Dialog.tsx`.
+  - **Testing Coverage:** 7 new comprehensive UX tests added in `frontend/src/test/PremiumUX.test.tsx`, raising frontend test suite to **30 passing tests** across 6 test suites. Frontend production build verified clean in 260ms.
+  - **Deliverable:** Created `docs/implementation/CAMPUSOPS_PREMIUM_UX_REVIEW.md`.
+- **System-Wide Integration Readiness Audit (Prompt 24 Completed):**
+  - **Traceability Matrix:** Audited all 15 core capabilities across 63 REST API endpoints. Found Capabilities 10–15 complete and integrated, while Capabilities 1–9 have complete backend foundations but lack frontend interfaces.
+  - **Security Invariants Verified:** Proved fail-closed authentication (HTTP 401), tenant isolation (anti-enumeration HTTP 404), atomic capacity reservation, all-or-nothing team admission, individual check-in enforcement, manager-only void audit trails ($\ge 10$ char mandatory reason), tiered contact masking, and spreadsheet formula injection sanitization.
+  - **Contract Reconciliation:** Proved frontend and backend agree on body-based POST endpoints (`/passes/verify`, `/registrations/lookup`, `/registrations/cancel`), resolving the legacy URL path discrepancy while maintaining backwards compatibility.
+  - **QR Code Inspection:** Audited `frontend/src/utils/qr.ts`; recorded the absence of automated standard decoder testing as an outstanding verification requirement.
+  - **Empirical Browser Verification:** Executed headless Edge rendering across desktop (1280px), tablet (768px), and mobile (375px); identified minor mobile navbar wrapping and horizontal overflow at 375px.
+  - **Production Gate Assessment:** Reassessed the 8 production gates; affirmed that production pilot remains **STRICT NO-GO**.
+  - **Deliverables:** Created `docs/implementation/SYSTEM_INTEGRATION_READINESS_AUDIT.md` and `docs/implementation/NEXT_PHASE_IMPLEMENTATION_BLUEPRINT.md`.
 - **Repository Hygiene:** All tracked and newly created files pass strict Git whitespace, line-ending, and dependency compatibility checks. Local test databases are excluded from Git via `.gitignore`.
 - **Historical Documentation Integrity:** Authoritative product documents in `Consolidated Documentation/` and historical archives (`Requirement Specification Documents/`, `Decision Logs Documents/`, `Other Documents/`) remain untouched.
 
@@ -170,36 +280,46 @@ Installed in `frontend/` using npm 11.13.0 and locked in `frontend/package-lock.
 In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every result below was directly executed and observed:
 
 ### 4.1 Backend Test Execution
-- **Command:** `backend\.venv\Scripts\python.exe -m pytest` (from repo root)
+- **Command:** `backend\.venv\Scripts\python.exe -m pytest backend/tests` (from repo root)
 - **Result:**
   ```text
   platform win32 -- Python 3.13.9, pytest-9.2.0, pluggy-1.7.0
   rootdir: D:\Antigravity_Projects\CampusOps\backend
   configfile: pytest.ini
   plugins: anyio-4.15.1
-  collected 145 items
+  collected 305 items
 
-  backend\tests\test_api_auth_boundary.py .........                        [  6%]
-  backend\tests\test_api_departments.py .......                            [ 11%]
-  backend\tests\test_api_event_leads.py ......                             [ 15%]
-  backend\tests\test_api_events.py ..........                              [ 22%]
-  backend\tests\test_api_invitations.py .........                          [ 28%]
-  backend\tests\test_api_me.py ....                                        [ 31%]
-  backend\tests\test_api_organizations.py .........                        [ 37%]
-  backend\tests\test_api_programs.py ........                              [ 42%]
-  backend\tests\test_api_scoped_invitations.py .....                       [ 46%]
-  backend\tests\test_domain_models.py ......                               [ 50%]
-  backend\tests\test_health.py .                                           [ 51%]
-  backend\tests\test_invitation.py .............                           [ 60%]
-  backend\tests\test_migrations.py .                                       [ 60%]
-  backend\tests\test_organization.py ........                              [ 66%]
-  backend\tests\test_permissions.py ........                               [ 71%]
-  backend\tests\test_slice_3a_domain.py .............                      [ 80%]
-  backend\tests\test_slice_3a_integrity_audit.py ..........                [ 87%]
-  backend\tests\test_slice_3b_event_dates_db.py .......                    [ 92%]
-  backend\tests\test_slice_3b_security_audit.py ...........                [100%]
+  backend\tests\test_api_auth_boundary.py .........                        [  3%]
+  backend\tests\test_api_blockers_notifications.py .....                   [  4%]
+  backend\tests\test_api_departments.py .......                            [  7%]
+  backend\tests\test_api_event_leads.py ......                             [  9%]
+  backend\tests\test_api_events.py ..........                              [ 12%]
+  backend\tests\test_api_invitations.py .........                          [ 15%]
+  backend\tests\test_api_me.py ....                                        [ 16%]
+  backend\tests\test_api_organizations.py .........                        [ 19%]
+  backend\tests\test_api_programs.py ........                              [ 22%]
+  backend\tests\test_api_scoped_invitations.py .....                       [ 23%]
+  backend\tests\test_api_slice_5c_registration.py ........................ [ 31%]
+  ........                                                                 [ 34%]
+  backend\tests\test_api_tasks.py .................                        [ 39%]
+  backend\tests\test_domain_models.py ......                               [ 41%]
+  backend\tests\test_health.py .                                           [ 41%]
+  backend\tests\test_invitation.py .............                           [ 45%]
+  backend\tests\test_migrations.py .....                                   [ 47%]
+  backend\tests\test_organization.py ........                              [ 50%]
+  backend\tests\test_permissions.py ........                               [ 52%]
+  backend\tests\test_slice_3a_domain.py .............                      [ 56%]
+  backend\tests\test_slice_3a_integrity_audit.py ..........                [ 60%]
+  backend\tests\test_slice_3b_event_dates_db.py .......                    [ 62%]
+  backend\tests\test_slice_3b_security_audit.py ...........                [ 65%]
+  backend\tests\test_slice_4a_security_audit.py ..............             [ 70%]
+  backend\tests\test_slice_4a_task_domain.py ..............                [ 75%]
+  backend\tests\test_slice_4b_security_audit.py ..............             [ 79%]
+  backend\tests\test_slice_5b_registration_domain.py ...................   [ 85%]
+  backend\tests\test_slice_5b_security_audit.py ....................       [ 92%]
+  backend\tests\test_slice_5c_security_audit.py ......................     [100%]
 
-  ======================= 145 passed, 1 warning in 3.02s ========================
+  ======================= 305 passed, 2 warnings in 25.12s =======================
   ```
 
 ### 4.2 Frontend Test Execution
@@ -208,11 +328,16 @@ In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every
   ```text
   RUN  v5.0.5 D:/Antigravity_Projects/CampusOps/frontend
 
-  ✓ src/App.test.tsx (2 tests) 98ms
+  ✓ src/test/qr.test.ts (3 tests) 21ms
+  ✓ src/test/PassDisplay.test.tsx (3 tests) 779ms
+  ✓ src/App.test.tsx (2 tests) 1390ms
+  ✓ src/test/PremiumUX.test.tsx (7 tests) 1526ms
+  ✓ src/test/StaffOperations.test.tsx (7 tests) 2149ms
+  ✓ src/test/PublicRegistration.test.tsx (8 tests) 2236ms
 
-  Test Files  1 passed (1)
-       Tests  2 passed (2)
-    Duration  989ms
+  Test Files  6 passed (6)
+       Tests  30 passed (30)
+    Duration  6.75s
   ```
 
 ### 4.3 Frontend Production Build
@@ -221,13 +346,13 @@ In strict accordance with the truth-in-testing rule (AGENTS.md Section 7), every
   ```text
   vite v8.3.5 building client environment for production...
   transforming...
-  ✓ 17 modules transformed.
+  ✓ 48 modules transformed.
   rendering chunks...
   computing gzip size...
   dist/index.html                   0.45 kB │ gzip:  0.29 kB
-  dist/assets/index-DUfPwTjg.css    2.24 kB │ gzip:  0.99 kB
-  dist/assets/index-CNf_Nd2m.js   219.92 kB │ gzip: 68.76 kB
-  ✓ built in 106ms
+  dist/assets/index-Dd279yQh.css   15.86 kB │ gzip:  3.77 kB
+  dist/assets/index-B12YQllx.js   315.18 kB │ gzip: 90.74 kB
+  ✓ built in 260ms
   ```
 
 ---
@@ -372,9 +497,203 @@ During Development Slice 4B (Prompt 16), the complete REST API layer was impleme
 6. **In-App Notifications (`backend/app/api/v1/endpoints/notifications.py`):**
    - Implemented routes for listing user notifications (with unread filter), retrieving single notification, and marking as read. Recipient boundary enforced (`user_id == current_user.id`).
 7. **Testing Coverage:**
-   - 22 new HTTP integration tests across `test_api_tasks.py` and `test_api_blockers_notifications.py`. Total backend test suite now stands at **196 passing tests**.
+   - 22 new HTTP integration tests across `test_api_tasks.py` and `test_api_blockers_notifications.py`. Total backend test suite reached 196 passing tests.
 8. **Deliverables:**
    - Created `docs/implementation/SLICE_4B_API_CONTRACT.md` and `docs/implementation/SLICE_4B_IMPLEMENTATION_REPORT.md`.
+
+### 5.11 Slice 4B REST API Security, Authorization & Transaction Audit Findings
+During Prompt 17, the Slice 4B REST APIs were audited and hardened against authorization, tenancy, and transactional criteria:
+1. **Blocker Anti-Enumeration & Tenancy Hardening (`app/api/v1/endpoints/blockers.py` & `app/services/task.py`):**
+   - Implemented `_ensure_blocker_in_org` across all blocker item routes (`GET`, `PATCH`, `POST /resolve`, `POST /reopen`) and added `organization_id` delegation in service methods, preventing cross-tenant existence enumeration (returning uniform HTTP 404) and URL tenant tampering by dual-members.
+2. **Removed Member Active Assignment Invalidation (`app/services/task.py` & `app/models/task.py`):**
+   - Hardened `start_task`, `submit_task_evidence`, deadline notifications, and `@property active_assignee` to assert active membership status (`membership_status == 'active'` and `removed_at is None`), blocking revoked members immediately.
+3. **Strict Self-Review Prohibition & Concurrency Replay Defense:**
+   - Verified that submitters and active assignees are strictly prevented from reviewing their own submissions (HTTP 400), even when holding elevated workspace roles.
+   - Verified conditional atomic updates prevent double-review races on already approved or rejected submissions.
+4. **Scope-Level Boundary Enforcement & Coordinator Ceiling:**
+   - Proved that Event Leads and Department Leads cannot view or mutate sibling scope tasks or blockers (returning HTTP 403, and excluded from listing endpoints).
+   - Proved Coordinators are restricted to read-only operations and proof submissions (when assigned), and cannot perform metadata updates, deadline changes, cancellations, reviews, or blocker resolutions.
+5. **Testing Coverage:**
+   - 14 new comprehensive security audit regression tests in `backend/tests/test_slice_4b_security_audit.py`. Total backend test suite now stands at **210 passing tests**.
+6. **Deliverables:**
+   - Created `docs/implementation/SLICE_4B_SECURITY_AUDIT_REPORT.md`.
+
+### 5.12 Slice 5A Participant Registration, Ticketing & Attendance Architecture
+During Prompt 18, the complete product scope, relational architecture, API contracts, security model, and acceptance-test plan were established for Slice 5:
+1. **Relational Schema Design (`docs/implementation/SLICE_5_SCHEMA_RELATIONSHIP_PLAN.md`):**
+   - Designed 7 normalized tables: `event_registration_settings`, `registrations`, `participants`, `registration_participants`, `tickets`, `check_ins`, and `check_in_corrections`.
+   - Enforced composite foreign keys `(organization_id, event_id)` for multi-tenant boundary integrity.
+   - Enforced partial unique indexes: `uq_participants_event_email` (one participant per email per event), `uq_ticket_participant_active` (single active pass per participant), and `uq_check_in_event_participant` (single active check-in per participant).
+2. **API Contract Draft (`docs/implementation/SLICE_5_API_CONTRACT_DRAFT.md`):**
+   - Public namespace: `/api/v1/public/events/{registration_key}/...` with unguessable keys, rate limiting, and honeypot validation for public registration, status queries, and pass retrieval.
+   - Staff namespace: `/api/v1/organizations/{org_id}/events/{event_id}/...` for registration settings, walk-ins, cancellations, roster queries with contact masking, pass verification, QR and manual check-ins, check-in voids with mandatory audit reason, summaries, and CSV export.
+3. **Acceptance Test Matrix (`docs/implementation/SLICE_5_ACCEPTANCE_TEST_PLAN.md`):**
+   - 48 exhaustive test cases across 8 functional and security categories covering happy paths, negative boundaries, sibling isolation, concurrency races, privacy masking, void audit logs, and Alembic roundtrips.
+4. **Formal Decision Log Closure (`Consolidated Documentation/CampusOps_Decision_Log_v1.7_Addendum.md`):**
+   - `D-SLICE5-01`: Capacity measured in individual human bodies; atomic reservation logic prevents overselling.
+   - `D-SLICE5-02`: Ticketing defined as digital non-payment admission pass; zero PII in QR codes.
+   - `D-SLICE5-03`: Registrations strictly scoped to individual events (no monolithic program pass merging).
+   - `D-SLICE5-04`: Check-in voids restricted to managers (`PRIMARY_ADMIN`, `OFFICE_BEARER`, `EVENT_LEAD`) with mandatory immutable audit history in `check_in_corrections`.
+5. **Design-Only Discipline:**
+   - Strictly no application code, database migrations, or endpoints implemented in this slice.
+
+### 5.13 Slice 5B Domain Foundation Findings & Implementation Details
+During Development Slice 5B (Prompt 19), the core registration, ticketing, and check-in domain foundation was implemented and verified:
+1. **Shared Email Policy & Participant Modeling (FA-007):**
+   - *Architecture Choice:* In academic and campus environments, students, lab partners, or family members may register using shared department or family email addresses. Imposing a database-level unique constraint `(event_id, email_normalized)` would prevent legitimate multi-participant registrations or team submissions.
+   - *Implementation:* The schema employs a non-unique index `ix_participants_event_email`. Distinct participants sharing an email receive distinct `Participant` records, separate UUIDs, unique tickets, and separate check-in records. Duplicate submissions are controlled via `idempotency_key` on `Registration` and intra-team duplicate participant validation.
+2. **Raw Token Non-Persistence & Hash-Only Verification:**
+   - *Security Defense:* Admission pass codes (`CO-PASS-<HEX>`) are never persisted in raw form in any database table. The `tickets` table persists only `pass_code_hash` (SHA-256).
+   - *Issuance & Verification:* Raw pass codes are returned only once at issuance boundary via `IssuedTicketDTO`. Verification hashes candidate input and performs constant-time equality checks using `hmac.compare_digest`.
+3. **Atomic Individual Capacity Accounting (D-SLICE5-01):**
+   - *Concurrency Safety:* Registration capacity counts individual attendees (`len(participants)`), not registrations. To prevent race conditions and overselling without coarse table locks, slot reservation executes via conditional atomic SQL update: `UPDATE event_registration_settings SET current_confirmed_count = current_confirmed_count + :slots WHERE event_id = :event_id AND current_confirmed_count + :slots <= capacity_limit`.
+   - *All-or-Nothing Team Invariant:* Teams are admitted in full or waitlisted; partial team reservations are prohibited.
+4. **Individual Attendance Invariant for Team Passes:**
+   - *Operational Rule:* Even when participants register together as a team, attendance check-in operates strictly per individual person. Checking in one team member marks only that member as present, while teammates remain unchecked until their passes are scanned.
+5. **Manager-Only Check-In Correction Authority (D-SLICE5-04):**
+   - *Auditability & Privilege Separation:* Regular registration staff (`REGISTRATION_STAFF` / `COORDINATOR`) holding `ACTION_CHECK_IN` are restricted to admitting attendees; they cannot void check-ins. Voiding or correcting a check-in requires manager authority (`ACTION_CORRECT_CHECK_IN`), a minimum 10-character rationale, and records an append-only entry in `check_in_corrections`.
+
+### 5.14 Slice 5B Registration, Ticketing & Attendance Security Audit Findings & Hardening
+During Prompt 20, an independent security and database-integrity audit was conducted across the Slice 5B registration domain:
+1. **Alembic Additive Hardening Migration (`c8d9e0f1a2b3`):**
+   - *Database Concurrency Defense:* Replaced non-unique `ix_registrations_idempotency` with partial unique index `uq_registrations_event_idempotency` (`['event_id', 'idempotency_key'] WHERE idempotency_key IS NOT NULL`), preventing concurrent duplicate submissions for the same event at the database engine level.
+   - *Public Registration Key Uniqueness:* Upgraded `ix_event_reg_settings_key_hash` to partial unique index `uq_event_reg_settings_key_hash` (`['registration_key_hash'] WHERE registration_key_hash IS NOT NULL`), guaranteeing that public capability URLs resolve unambiguously to at most one event.
+   - *Lifecycle Roundtrip:* Verified incremental upgrade and downgrade roundtrips in `test_migrations.py`.
+2. **Credential Security & Unguessable Key Threat Model:**
+   - Proved 128-bit cryptographic entropy in `generate_ticket_credential()` (`CO-PASS-<HEX>`), non-persistence of raw tokens (SHA-256 only stored in `tickets.pass_code_hash`), constant-time verification using `hmac.compare_digest`, absence of credentials in `Ticket.__repr__`, and zero PII in passes.
+   - Implemented `generate_registration_key()` and added key rotation capability (`rotate_registration_key: bool = False`) in `update_registration_settings`.
+3. **Relational Isolation & Scope Integrity:**
+   - Verified via direct SQL tests that composite foreign keys `(event_id, organization_id)` strictly block cross-tenant registrations, participants, and settings, and prevent cross-event ticket, registration-participant, and check-in associations at the database engine level.
+4. **Attendance Query Safety & Multi-Ticket Handling:**
+   - Hardened manual roster check-in in `check_in_participant` to query active `status == 'issued'` tickets first, falling back to `status == 'used'` only for duplicate scan idempotency. This eliminates potential `MultipleResultsFound` exceptions when replacement passes exist.
+   - Hardened `issue_replacement_ticket` to revoke all prior non-cancelled (`issued`, `used`) tickets for the participant with audit timestamp and reason before issuing a replacement.
+5. **Transitive Scope Archival Protection:**
+   - Enforced that child events under archived parent programs cannot accept registrations or be opened for registration in `_validate_event_and_settings_for_registration` and `update_registration_settings`.
+6. **Diagnostic Reconciliation Engine:**
+   - Built `reconcile_event_registration_counts(db, event_id, auto_fix=False)` providing exact verification between stored counters and active database rows.
+
+### 5.15 Slice 5C Participant Registration, Ticketing & Attendance REST API Implementation
+During Development Slice 5C (Prompt 21), the complete public and staff REST API layer for registration, ticketing, and check-in was implemented and verified:
+1. **Public Self-Service Registration Namespace (`/api/v1/public/...`):**
+   - Addressed by unguessable registration keys (`reg_<32-hex>`), returning public event parameters, registration format, team limits, and capacity availability.
+   - Pydantic v2 `extra="forbid"` models reject unknown parameters or client-supplied IDs.
+   - Submissions issue unguessable digital admission passes (`CO-PASS-<HEX>`) with zero PII in passes or QR payloads.
+   - Safe idempotency replay returns prior registration details with pass tokens redacted (`<REDACTED_AFTER_ISSUANCE>`).
+   - Conflicting payloads with matching idempotency keys return `HTTP 409 Conflict`.
+   - Unguessable confirmation code lookup protects attendee contact details. Self-service cancellation verifies contact email identity and restores event capacity.
+2. **Staff Operational Namespace (`/api/v1/organizations/{org_id}/events/{event_id}/...`):**
+   - Gated by deny-by-default role permissions (`ACTION_VIEW_REGISTRATIONS`, `ACTION_MANAGE_REGISTRATION_SETTINGS`, `ACTION_CHECK_IN`, `ACTION_CORRECT_CHECK_IN`, `ACTION_EXPORT_PARTICIPANTS`).
+   - Ordinary registration desk volunteers (`REGISTRATION_STAFF`) receive masked contact info (`mask_email`, `mask_phone`). Unmasked contact info requires `ACTION_VIEW_ATTENDEE_CONTACT`.
+   - Check-ins support QR scan and manual roster lookup. Duplicate scans return `status: "already_checked_in"` without inflating attendance counts.
+   - Managerial check-in voids (`ACTION_CORRECT_CHECK_IN`) enforce a minimum 10-character explanation, revert ticket/participant status, decrement attendance, and record an immutable audit entry in `check_in_corrections`. Desk volunteers are denied (`HTTP 403 Forbidden`).
+   - Roster export streams CSV format strictly gated by `ACTION_EXPORT_PARTICIPANTS`.
+3. **Transaction Safety:**
+   - Savepoint isolation via `with db.begin_nested():` ensures that failed capacity reservations or validation errors rollback cleanly without corrupting session state or outer fixtures.
+
+### 5.16 Slice 5C Public API Security, Privacy & Transaction Audit Findings & Hardening
+During Prompt 22, an independent security, privacy, transaction integrity, and abuse-prevention audit was conducted across the completed Slice 5C REST API layer:
+1. **URL Credential Exposure Mitigation:**
+   - *Threat Surface:* Raw bearer tokens (`pass_code`) and capability references (`confirmation_code`) in GET/POST URL paths leak into browser history, access logs, referer headers, and proxy telemetry.
+   - *Hardening:* Introduced secure POST body endpoints:
+     - `POST /public/events/{key}/passes/verify` accepting `{"pass_code": "..."}`.
+     - `POST /public/events/{key}/registrations/lookup` accepting `{"confirmation_code": "..."}`.
+     - `POST /public/events/{key}/registrations/cancel` accepting `{"confirmation_code": "...", "contact_email": "...", "cancellation_reason": "..."}`.
+   - Retained legacy GET/path routes for backward compatibility.
+2. **Spreadsheet Formula Injection Sanitization (CWE-1236):**
+   - *Threat Surface:* Registrants entering names or text fields beginning with formula execution characters (`=`, `+`, `-`, `@`, `\t`, `\r`) could trigger dynamic formula or DDE command execution when staff open exported CSV files in Excel or Google Sheets.
+   - *Hardening:* Implemented `sanitize_csv_cell(...)` in `app/services/registration.py` and applied to all user-controllable columns in `export_event_roster_csv`. Prepends `'` to neutralize formula triggers.
+3. **Registration Transaction Privacy:**
+   - Enforced tiered contact masking on `GET .../registrations` headers: callers lacking elevated `ACTION_VIEW_ATTENDEE_CONTACT` receive masked `contact_email` and `contact_phone`.
+4. **Registration Key Rotation & Transitive Program Archival:**
+   - Enhanced `update_registration_settings` to transiently attach the generated `public_registration_key` to the response DTO so managers can immediately distribute it upon rotation.
+   - Verified that archiving parent programs transitively invalidates public and staff access for child events.
+5. **Dedicated Security Audit Test Suite:**
+   - Authored `backend/tests/test_slice_5c_security_audit.py` with 22 dedicated test cases proving all audit guarantees (zero PII in passes, uniform 404s on tampered tokens, idempotency replay with safe credential redaction `<REDACTED_AFTER_ISSUANCE>`, volunteer roster masking, manager-only voiding with >= 10 chars explanation, duplicate scan idempotency with `already_checked_in`, all-or-nothing team capacity rollback, and single active ticket invariants). Total backend test suite reached **305 passing tests**.
+
+### 5.17 Slice 5D Frontend Implementation, Premium UX Review & System Readiness Audit
+During Slice 5D (Prompts 23 & 24), the complete public participant and staff event operations frontend was implemented in React 19 + TypeScript + Vite:
+1. **Public Self-Service Registration Views:**
+   - Event overview displaying dates, times, venue, description, format badges, and live capacity meters.
+   - Dual registration forms: Individual registration and Team registration (with dynamic member addition/removal, lead contact fields, and team size boundaries).
+   - Real-time client-side field validation, double-submission protection, and honeypot spam protection.
+   - Self-service confirmation code lookup modal.
+2. **Admission Pass & Zero-PII Digital Tickets:**
+   - Individual and team digital pass display with scannable QR code generator, ticket references, and event date/time.
+   - Pure-SVG client-side QR generator avoiding external CDN dependencies.
+   - Single-use raw pass token reveal with sensitive-credential handling boundaries.
+3. **Staff Event Desk & Operations Suite:**
+   - Check-in desk with dual operation modes: fast QR/pass-code verification and instant roster candidate search with direct check-in actions.
+   - Participant roster table with real-time text search, status filters (`registered`, `checked_in`, `waitlisted`, `cancelled`), and role-based contact masking indicators.
+   - Attendance summary analytics card with live metric badges, percentage progress bars, capacity breakdown, and manual refresh controls.
+   - Managerial check-in correction modal (`ACTION_CORRECT_CHECK_IN`) requiring a 10-character minimum audit explanation.
+   - Participant detail view showing pass hash, check-in history, registration timestamp, and replacement ticket issuance.
+4. **Premium UX & System Integration Audit:**
+   - System-wide design system tokens, accessible keyboard shortcuts, toast notification provider, high-contrast states, and empirical browser validation across 1280px, 768px, and 375px viewports.
+
+### 5.18 Slice 5D Technical Closure & Verification Remediations (Prompt 25)
+During Prompt 25, the four outstanding technical remediation items identified by the System Integration Readiness Audit were closed and verified:
+1. **Removal of Legacy Capability-Bearing URL Routes:**
+   - In `backend/app/api/v1/endpoints/public_registration.py`, removed legacy routes accepting raw tokens in paths (`GET /passes/{pass_code}`, `GET /registrations/{confirmation_code}`, `POST /registrations/{confirmation_code}/cancel`).
+   - Deprecated and eliminated formatting raw pass codes into `pass_url` strings (set to `None`).
+   - Standardized on body-based POST endpoints (`POST /passes/verify`, `POST /registrations/lookup`, `POST /registrations/cancel`).
+   - Regression test `test_public_capability_legacy_get_endpoints_removed` verifies legacy routes return HTTP 404.
+2. **Independent QR Code Decoding Verification (`jsQR 1.4.0`):**
+   - Installed `jsqr` in `frontend/package.json` for automated verification.
+   - Identified and resolved two critical encoding bugs in `frontend/src/utils/qr.ts`:
+     - Top-left format information bits were ordered LSB-first instead of MSB-first per ISO/IEC 18004 Figure 25.
+     - Dark module at coordinate $(4 \times \text{version} + 9, 8)$ was overwritten by format bit 7 due to an index bounds error (`i < 8` vs `i < 7`).
+   - Implemented rasterized SVG decoding test suite validating 100% decode success across short, medium (`CO-PASS-...`), long, and special-character payloads across ECC levels L, M, Q, and H.
+3. **ISO/IEC 18004 Standards-Compliant Dynamic Mask Penalty Evaluation:**
+   - Replaced hardcoded Mask 0 with dynamic penalty calculation ($N_1..N_4$) evaluating all 8 standard mask patterns ($0 \le m \le 7$) and selecting the minimal-penalty mask for each payload.
+   - Corrected alignment pattern step coordinates for Versions 2–6 (`[18]`, `[22]`, `[26]`, `[30]`, `[34]`) and sequenced timing patterns before alignment patterns.
+4. **Mobile Navigation & Responsive Viewport Overflow:**
+   - Converted `.co-navbar` into a responsive column layout at $\le 640\text{px}$ in `components.css`.
+   - Prevented badge wrapping with `white-space: nowrap; flex-shrink: 0;`.
+   - Enhanced `Footer.tsx` and error lookup buttons with responsive flex wrapping, eliminating all horizontal scrolling at 375px.
+
+### 5.19 Phase 1 Workspace, Organization & Team Management Frontend Implementation (Prompt 26)
+During Prompt 26, Phase 1 of the Next-Phase Implementation Blueprint was implemented and verified:
+1. **Workspace Provisioning & Switching:**
+   - Implemented `CreateOrgModal` connected to `POST /api/v1/organizations` with client-side field validation and clear FPC-02/FPC-03 policy guidance.
+   - Built `OrganizationSwitcher` connected to `GET /api/v1/organizations` enabling seamless context switching between authorized workspaces and instant creation triggers.
+2. **Institutional Verification & Administrative Audit:**
+   - Implemented `VerificationBanner` communicating `pending_verification`, `verified`, and `rejected` states with tiered audit feedback (`verification_note`, review timestamp).
+   - Created `PlatformVerifyModal` connected to `POST /api/v1/organizations/{id}/verify`, restricted to platform administrators with mandatory rejection rationale.
+3. **Role-Scoped Invitations & Token Acceptance:**
+   - Built `InviteMemberModal` connected to `POST /api/v1/organizations/{id}/invitations` allowing invitation of valid backend roles (`OFFICE_BEARER`, `COORDINATOR`, `DEPARTMENT_LEAD`, `EVENT_LEAD`, `REGISTRATION_STAFF`). Enforced that invitations remain disabled while workspace verification is pending.
+   - Gracefully handled `HTTP 503 Service Unavailable` when transactional email provider is unconfigured (FPC-06 fail-closed policy).
+   - Implemented `InvitationAcceptView` submitting raw tokens strictly through JSON POST body (`POST /api/v1/invitations/accept`), mapping 401, 403, 404, 409, and 400 error states.
+4. **Member Directory & Revocation Management:**
+   - Implemented `MemberDirectoryTable` displaying current user membership, assigned roles, search filters, and session-dispatched invitation revocation (`POST .../invitations/{id}/revoke`).
+   - Formally documented missing backend endpoints `GET /organizations/{id}/members` and `GET /organizations/{id}/invitations` for multi-user tenant rosters.
+5. **Testing Coverage:**
+   - Added 18 new automated frontend tests in `frontend/src/test/WorkspaceTeam.test.tsx` and `App.test.tsx`. Total frontend test suite expanded from 35 to **53 passing tests**.
+
+- **Phase 1.1 Organization Management Closure (Completed & Verified — Prompt 27):** Completed the organization-management capabilities identified during Phase 1:
+  1. **Secure Invitation URL Fragment Routing:**
+     - Replaced legacy query parameter routing with secure URL fragment `#token=...` / `#invite_token=...`.
+     - Extracted token into ephemeral component state and immediately scrubbed the fragment from browser address bar and history via `window.history.replaceState` before any network request.
+     - Rejected legacy query parameter URLs (`?token=...`) with an explicit security alert and manual-entry fallback; zero query parameter acceptance.
+     - Enforced that invitation tokens are never written to `localStorage`, `sessionStorage`, or cookies.
+  2. **Organization-Wide Member Directory API:**
+     - Implemented `GET /api/v1/organizations/{organization_id}/members`.
+     - Enforced tenant isolation: active membership or platform admin authority required; uniform HTTP 404 for non-members and missing/archived organizations.
+     - Enforced contact privacy disclosure rules: managers (`PRIMARY_ADMIN`, `OFFICE_BEARER`), platform admins, and users viewing their own record receive unmasked email; ordinary members viewing other members receive masked email (`mask_email()`). Returned explicit `email_masked: bool` flag.
+     - Supported status filtering and offset/limit pagination.
+  3. **Organization-Wide Invitation Directory API:**
+     - Implemented `GET /api/v1/organizations/{organization_id}/invitations`.
+     - Gated by role management authority (`ACTION_MANAGE_ROLES` or `ACTION_INVITE_MEMBER`); unauthorized members receive HTTP 403 Forbidden; non-members receive uniform HTTP 404.
+     - Supported status filtering (`pending`, `accepted`, `revoked`, `expired`) with dynamic expiration calculation and offset/limit pagination.
+     - Strictly excluded `raw_token` and `token_hash` from responses.
+  4. **Frontend Directory Integration:**
+     - Updated `frontend/src/api/types.ts` with `OrganizationMemberResponse`.
+     - Added `listOrganizationMembers` and `listOrganizationInvitations` to `frontend/src/api/organizations.ts`.
+     - Integrated `MemberDirectoryTable.tsx` with live API queries, loading spinners, error alerts with retry, status filters, pagination controls, and privacy `Masked` badges.
+     - Integrated `WorkspaceOverview.tsx` and `InvitationAcceptView.tsx`.
+  5. **Testing Coverage:**
+     - Backend test suite expanded from 305 to **310 passing tests** (5 new integration tests in `test_api_organizations.py` and `test_api_invitations.py`).
+     - Frontend test suite expanded from 53 to **59 passing tests** (6 new automated tests in `WorkspaceTeam.test.tsx`).
+     - Production build verified (`tsc -b && vite build` clean in 145ms).
 
 ---
 
@@ -384,15 +703,16 @@ During Development Slice 4B (Prompt 16), the complete REST API layer was impleme
 | :--- | :--- | :--- | :--- |
 | **TG-01** | Toolchain Baseline | Confirm local Python virtual environment and Node workspace setup on Python 3.13 / Node 26. | **PASSED** (Backend venv & frontend build verified) |
 | **TG-02** | Authentication Spike | Evaluate Supabase Auth candidate: server-side JWT verification via JWKS in FastAPI, token expiry, invitation acceptance, and TOTP MFA. | **Spike Specification Ready / External Provider Blocked** (Cryptographic validation verified on Python 3.13; live container/hosted testing blocked by stopped Docker daemon and unconfigured credentials; candidate conditionally recommended; report in `docs/implementation/SLICE_2C_AUTH_FEASIBILITY_REPORT.md`) |
-| **TG-03** | Database & Migrations | Initialize schema with SQLAlchemy/Alembic enforcing organization tenancy and unique constraints. | **PASSED (Slice 4A Migration Baseline)** (Alembic migrations `880d8e4eb890`, `c92f1b4a3d10`, `d81e3a5f2c90`, `e4f5a6b7c8d9`, `f5a6b7c8d9e0`, and `a6b7c8d9e0f1`; batch mode for SQLite, relational integrity, composite foreign keys for multi-tenancy, exclusive-parent check constraint, temporal and date ordering check constraints, partial unique indexes, and 10 task/blocker models verified) |
-| **TG-04** | API Contract Freeze | Freeze OpenAPI path schemas and Pydantic models for `/me`, `/organizations`, `/invitations`, `/programs`, `/events`, `/departments`, `/tasks`, `/blockers`, and `/notifications`. | **PASSED (Slice 4B API Baseline)** (Pydantic v2 models, fail-closed auth, scoped invitations, task management, proof review, blockers, notifications, and 196 backend tests verified) |
-| **TG-05** | Test Framework Baseline | Establish backend pytest and frontend vitest suites with automated execution. | **PASSED** (196 backend tests, 2 frontend tests passing) |
+| **TG-03** | Database & Migrations | Initialize schema with SQLAlchemy/Alembic enforcing organization tenancy and unique constraints. | **PASSED (Slice 5B Hardened Migration Baseline)** (Alembic migrations `880d8e4eb890`, `c92f1b4a3d10`, `d81e3a5f2c90`, `e4f5a6b7c8d9`, `f5a6b7c8d9e0`, `a6b7c8d9e0f1`, `b7c8d9e0f1a2`, and `c8d9e0f1a2b3`; batch mode for SQLite, relational integrity, composite foreign keys for multi-tenancy, partial unique indexes for active tickets/check-ins/idempotency/keys, and 17 domain models verified) |
+| **TG-04** | API Contract Freeze | Freeze OpenAPI path schemas and Pydantic models for `/me`, `/organizations`, `/invitations`, `/programs`, `/events`, `/departments`, `/tasks`, `/blockers`, `/notifications`, and Slice 5 registration/check-in. | **PASSED (Slice 5C APIs Audited, Hardened & Body-Based Post Standardized)** (Pydantic v2 models with `extra="forbid"`, fail-closed auth, scoped invitations, task management, proof review, blockers, notifications, Slice 5 public and staff registration endpoints, body-based verification endpoints, 310 backend tests verified; formal contract in `docs/implementation/SLICE_5C_API_CONTRACT.md`) |
+| **TG-05** | Test Framework Baseline | Establish backend pytest and frontend vitest suites with automated execution. | **PASSED** (310 backend tests across 25 suites, 59 frontend tests across 7 suites passing, clean production build) |
 | **TG-06** | Evidence Storage | Validate private object storage adapter and signed upload/download URLs before task file proof is enabled. | **Deferred** (Evidence links validated safely without server fetch; file uploads deferred to future storage adapter slice) |
-| **TG-07** | Production Pilot | Deploy on target cloud region, configure custom SMTP, test DB backup/restore, enforce admin MFA, and test manual fallback. | **NO-GO** (Blocked until pilot readiness checklist is satisfied) |
+| **TG-07** | Production Pilot | Deploy on target cloud region, configure custom SMTP, test DB backup/restore, enforce admin MFA, and test manual fallback. Incorporates operational sub-criteria TG-07.1 through TG-07.8 (Identity Provider, PostgreSQL parity, distributed rate limiting, private storage, structured logging/APM, PITR backups, deployment containers, and secret management). | **NO-GO** (Blocked until pilot readiness checklist is satisfied) |
 
 ---
 
 ## 7. Recommended Next Steps
 
-1. **Development Slice 4B Security & Authorization Audit (Prompt 17):** Perform comprehensive route-by-route audit of Slice 4B API endpoints, transaction rollback under concurrency, and permission boundary hardening before starting Slice 5.
-2. **TG-02 Hosted / Container Verification:** Execute live verification against a running Supabase instance (disposable cloud project or containerized CI) once credentials or container infrastructure are provided.
+1. **Next Phase Implementation Blueprint (Phase 2):** Implement Programs, Events & Department Structure Frontend (`docs/implementation/NEXT_PHASE_IMPLEMENTATION_BLUEPRINT.md` Phase 2): Dual setup journeys (Standalone Event Workflow A vs Multi-Event Program Workflow B), date/time pickers, and Event Lead assignments.
+2. **Next Phase Implementation Blueprint (Phase 3):** Implement Task & Proof Hub Frontend (Task creation, assignees, deadlines, proof review, and submission forms).
+3. **TG-02 Hosted / Container Verification:** Execute live verification against a running Supabase instance (disposable cloud project or containerized CI) once credentials or container infrastructure are provided.

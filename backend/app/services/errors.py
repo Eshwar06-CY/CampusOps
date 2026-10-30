@@ -136,3 +136,87 @@ class OperationalBlockerNotFoundError(OperationalBlockerError):
     """Raised when an operational blocker does not exist or is inaccessible."""
     pass
 
+
+# =========================================================================
+# Slice 5B: Registration, Ticketing, and Attendance Domain Errors
+# =========================================================================
+
+class RegistrationError(DomainError):
+    """Base exception for event registration errors."""
+    pass
+
+
+class RegistrationNotFoundError(RegistrationError):
+    """Raised when a Registration does not exist or is inaccessible."""
+    pass
+
+
+class RegistrationClosedError(RegistrationError):
+    """Raised when registration is disabled or closed for an event."""
+    pass
+
+
+class RegistrationWindowError(RegistrationError):
+    """Raised when registration is attempted outside configured temporal windows."""
+    pass
+
+
+class CapacityExhaustedError(RegistrationError):
+    """Raised when an event has reached maximum participant capacity."""
+    pass
+
+
+class InvalidTeamSizeError(RegistrationError):
+    """Raised when team size does not conform to event settings."""
+    pass
+
+
+class DuplicateRegistrationError(RegistrationError):
+    """Raised when an exact duplicate registration submission is detected."""
+    pass
+
+
+class IdempotencyConflictError(RegistrationError):
+    """Raised when an idempotency key is reused with a different payload."""
+    pass
+
+
+class TicketError(DomainError):
+    """Base exception for Ticket and admission pass domain errors."""
+    pass
+
+
+class TicketNotFoundError(TicketError):
+    """Raised when an admission pass credential cannot be found."""
+    pass
+
+
+class TicketInvalidError(TicketError):
+    """Raised when an admission pass credential is tampered, cancelled, or invalid."""
+    pass
+
+
+class TicketRevokedError(TicketError):
+    """Raised when an admission pass credential has been revoked."""
+    pass
+
+
+class CheckInError(DomainError):
+    """Base exception for attendance check-in errors."""
+    pass
+
+
+class CheckInNotFoundError(CheckInError):
+    """Raised when a check-in record does not exist or is inaccessible."""
+    pass
+
+
+class AlreadyCheckedInError(CheckInError):
+    """Raised when a participant is already actively checked in."""
+    pass
+
+
+class CheckInCorrectionError(DomainError):
+    """Raised when check-in correction or void invariants are violated."""
+    pass
+

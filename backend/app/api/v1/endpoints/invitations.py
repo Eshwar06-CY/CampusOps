@@ -1,12 +1,15 @@
+from datetime import datetime, timezone
+from typing import List, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.principal import get_current_user
 from app.database import get_db
 from app.models.invitation import Invitation
-from app.models.organization import Organization
+from app.models.organization import Organization, OrganizationMembership
 from app.models.user import UserProfile
 from app.schemas.invitation import (
     InvitationAcceptRequest,
@@ -34,6 +37,12 @@ from app.services.invitation import (
     accept_invitation,
     create_invitation,
     revoke_invitation,
+)
+from app.services.permissions import (
+    ACTION_INVITE_MEMBER,
+    ACTION_MANAGE_ROLES,
+    can_perform,
+    is_active_platform_admin,
 )
 
 router = APIRouter()
@@ -252,3 +261,120 @@ def revoke_org_invitation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err),
         )
+
+
+@router.get(
+    "/organizations/{organization_id}/invitations",
+    response_model=List[InvitationResponse],
+)
+def list_org_invitations(
+    organization_id: uuid.UUID,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: UserProfile = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[InvitationResponse]:
+    """
+    Lists invitations belonging to the specified organization.
+    - Gated by role management or invitation authority (PRIMARY_ADMIN, OFFICE_BEARER) or Platform Admin.
+    - Tenant-isolated: returns uniform 404 for non-members / non-existent organizations.
+    - Paginated (limit/offset).
+    - Excludes raw tokens and token hashes.
+    """
+    org = db.get(Organization, organization_id)
+    if not org or org.archived_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found.",
+        )
+
+    is_platform = is_active_platform_admin(db, current_user.id)
+    membership = db.execute(
+        select(OrganizationMembership).where(
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.user_id == current_user.id,
+            OrganizationMembership.membership_status == "active",
+            OrganizationMembership.removed_at == None,
+        )
+    ).scalar_one_or_none()
+
+    if not membership and not is_platform:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found.",
+        )
+
+    # Authority check: must be platform admin or have ACTION_MANAGE_ROLES / ACTION_INVITE_MEMBER
+    has_permission = (
+        is_platform
+        or can_perform(
+            db=db,
+            user=current_user,
+            action=ACTION_MANAGE_ROLES,
+            organization_id=organization_id,
+            scope_type="organization",
+        )
+        or can_perform(
+            db=db,
+            user=current_user,
+            action=ACTION_INVITE_MEMBER,
+            organization_id=organization_id,
+            scope_type="organization",
+        )
+    )
+
+    if not has_permission:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view organization invitations.",
+        )
+
+    now = datetime.now(timezone.utc)
+    stmt = select(Invitation).where(Invitation.organization_id == organization_id)
+
+    if status_filter:
+        if status_filter == "pending":
+            stmt = stmt.where(
+                Invitation.status == "pending",
+                Invitation.expires_at > now,
+                Invitation.revoked_at == None,
+            )
+        elif status_filter == "expired":
+            stmt = stmt.where(
+                (Invitation.status == "expired")
+                | ((Invitation.status == "pending") & (Invitation.expires_at <= now))
+            )
+        elif status_filter in ("accepted", "revoked"):
+            stmt = stmt.where(Invitation.status == status_filter)
+        else:
+            stmt = stmt.where(Invitation.status == status_filter)
+
+    stmt = stmt.order_by(Invitation.created_at.desc()).offset(offset).limit(limit)
+    invitations = list(db.execute(stmt).scalars().all())
+
+    results: List[InvitationResponse] = []
+    for inv in invitations:
+        effective_status = inv.status
+        expires = inv.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if effective_status == "pending" and expires <= now:
+            effective_status = "expired"
+
+        results.append(
+            InvitationResponse(
+                id=inv.id,
+                organization_id=inv.organization_id,
+                email=inv.email_normalized,
+                email_normalized=inv.email_normalized,
+                role_name=inv.role_name,
+                scope_type=inv.scope_type,
+                scope_id=inv.scope_id,
+                status=effective_status,
+                expires_at=inv.expires_at,
+                created_at=inv.created_at,
+            )
+        )
+
+    return results

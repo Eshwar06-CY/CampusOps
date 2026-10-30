@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.models.organization import Organization
-from app.services.organization import create_organization
+from app.services.organization import create_organization, verify_organization
 
 
 def test_create_organization_success(
@@ -322,4 +322,148 @@ def test_organization_detail_information_disclosure_controls(
     assert data_coord["verification_note"] is None
     assert data_coord["verification_reviewer_id"] is None
     assert data_coord["verification_reviewed_at"] is None
+
+
+def test_list_organization_members_unauthenticated(client: TestClient):
+    """Verify listing members fails closed with 401 when unauthenticated."""
+    resp = client.get(f"/api/v1/organizations/{uuid.uuid4()}/members")
+    assert resp.status_code == 401
+
+
+def test_list_organization_members_non_member_returns_404(
+    client: TestClient,
+    db,
+    create_synthetic_user,
+    auth_user,
+):
+    """Verify non-members receive uniform 404 (anti-enumeration)."""
+    alice = create_synthetic_user("alice@campus.edu", "Alice")
+    bob = create_synthetic_user("bob@campus.edu", "Bob")
+    org = create_organization(db, creator=alice, college_name="College", club_name="Club")
+
+    auth_user(bob)
+    resp = client.get(f"/api/v1/organizations/{org.id}/members")
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_list_organization_members_success_and_privacy_masking(
+    client: TestClient,
+    db,
+    create_synthetic_user,
+    create_synthetic_platform_admin,
+    auth_user,
+):
+    """
+    Verify member directory listing with contact privacy disclosure rules:
+    - Primary Admin sees full unmasked emails.
+    - Ordinary member (Coordinator) sees their own email unmasked, but other members masked.
+    - Output strictly excludes credentials, passwords, and tokens.
+    """
+    admin = create_synthetic_platform_admin("superadmin@campusops.internal")
+    creator = create_synthetic_user("creator@campus.edu", "Primary Admin User")
+    org = create_organization(db, creator=creator, college_name="Stanford", club_name="AI Society")
+    verify_organization(db, admin_user=admin, organization_id=org.id, decision="verified")
+
+    # Add second member: Coordinator
+    coord = create_synthetic_user("coord.secret@stanford.edu", "Coordinator User")
+    from app.models.organization import OrganizationMembership
+    from app.models.role import RoleAssignment
+
+    coord_m = OrganizationMembership(
+        organization_id=org.id,
+        user_id=coord.id,
+        membership_status="active",
+        created_by_user_id=creator.id,
+    )
+    db.add(coord_m)
+    db.flush()
+    db.add(
+        RoleAssignment(
+            membership_id=coord_m.id,
+            role_name="COORDINATOR",
+            scope_type="organization",
+            scope_id=None,
+            granted_by_user_id=creator.id,
+        )
+    )
+    db.commit()
+
+    # 1. Primary Admin queries: both members unmasked
+    auth_user(creator)
+    resp_admin = client.get(f"/api/v1/organizations/{org.id}/members")
+    assert resp_admin.status_code == 200
+    members_admin = resp_admin.json()
+    assert len(members_admin) == 2
+
+    # Verify no credential leakage
+    for m in members_admin:
+        assert "password" not in m
+        assert "token" not in m
+        assert "auth_subject_id" not in m
+        assert m["email_masked"] is False
+
+    coord_entry_admin = next(m for m in members_admin if m["user_id"] == str(coord.id))
+    assert coord_entry_admin["email"] == "coord.secret@stanford.edu"
+    assert coord_entry_admin["display_name"] == "Coordinator User"
+    assert any(r["role_name"] == "COORDINATOR" for r in coord_entry_admin["roles"])
+
+    # 2. Coordinator queries: self is unmasked, creator is masked
+    auth_user(coord)
+    resp_coord = client.get(f"/api/v1/organizations/{org.id}/members")
+    assert resp_coord.status_code == 200
+    members_coord = resp_coord.json()
+    assert len(members_coord) == 2
+
+    coord_self = next(m for m in members_coord if m["user_id"] == str(coord.id))
+    assert coord_self["email"] == "coord.secret@stanford.edu"
+    assert coord_self["email_masked"] is False
+
+    creator_from_coord = next(m for m in members_coord if m["user_id"] == str(creator.id))
+    assert creator_from_coord["email_masked"] is True
+    assert creator_from_coord["email"] != "creator@campus.edu"
+    assert "c***r@campus.edu" == creator_from_coord["email"]
+
+    # 3. Platform Admin queries: unmasked
+    auth_user(admin)
+    resp_platform = client.get(f"/api/v1/organizations/{org.id}/members")
+    assert resp_platform.status_code == 200
+    assert len(resp_platform.json()) == 2
+    assert all(m["email_masked"] is False for m in resp_platform.json())
+
+
+def test_list_organization_members_pagination_and_status_filtering(
+    client: TestClient,
+    db,
+    create_synthetic_user,
+    auth_user,
+):
+    """Verify limit, offset, and status filtering on members endpoint."""
+    creator = create_synthetic_user("owner@campus.edu", "Owner")
+    org = create_organization(db, creator=creator, college_name="MIT", club_name="Robotics")
+
+    auth_user(creator)
+
+    # Add 2 more members
+    from app.models.organization import OrganizationMembership
+    for i in range(2):
+        u = create_synthetic_user(f"member{i}@mit.edu", f"Member {i}")
+        mem = OrganizationMembership(
+            organization_id=org.id,
+            user_id=u.id,
+            membership_status="active",
+            created_by_user_id=creator.id,
+        )
+        db.add(mem)
+    db.commit()
+
+    # Query with limit=2, offset=0
+    resp1 = client.get(f"/api/v1/organizations/{org.id}/members?limit=2&offset=0")
+    assert resp1.status_code == 200
+    assert len(resp1.json()) == 2
+
+    # Query with limit=2, offset=2
+    resp2 = client.get(f"/api/v1/organizations/{org.id}/members?limit=2&offset=2")
+    assert resp2.status_code == 200
+    assert len(resp2.json()) == 1
 

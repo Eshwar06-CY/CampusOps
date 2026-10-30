@@ -1,0 +1,161 @@
+/* CampusOps Design System Tokens */
+:root {
+  /* Color Palette - Neutral Slate & Zinc */
+  --co-slate-50: #f8fafc;
+  --co-slate-100: #f1f5f9;
+  --co-slate-200: #e2e8f0;
+  --co-slate-300: #cbd5e1;
+  --co-slate-400: #94a3b8;
+  --co-slate-500: #64748b;
+  --co-slate-600: #475569;
+  --co-slate-700: #334155;
+  --co-slate-800: #1e293b;
+  --co-slate-900: #0f172a;
+  --co-slate-950: #020617;
+
+  /* Primary Brand - Operational Indigo */
+  --co-primary-50: #eef2ff;
+  --co-primary-100: #e0e7ff;
+  --co-primary-200: #c7d2fe;
+  --co-primary-300: #a5b4fc;
+  --co-primary-400: #818cf8;
+  --co-primary-500: #6366f1;
+  --co-primary-600: #4f46e5;
+  --co-primary-700: #4338ca;
+  --co-primary-800: #3730a3;
+  --co-primary-900: #312e81;
+
+  /* Success / Verified - Signal Emerald */
+  --co-success-50: #ecfdf5;
+  --co-success-100: #d1fae5;
+  --co-success-200: #a7f3d0;
+  --co-success-500: #10b981;
+  --co-success-600: #059669;
+  --co-success-700: #047857;
+  --co-success-800: #065f46;
+
+  /* Warning / Cautionary / Duplicate - Amber */
+  --co-warning-50: #fffbeb;
+  --co-warning-100: #fef3c7;
+  --co-warning-200: #fde68a;
+  --co-warning-500: #f59e0b;
+  --co-warning-600: #d97706;
+  --co-warning-700: #b45309;
+  --co-warning-800: #92400e;
+
+  /* Danger / Error / Void - Studio Crimson */
+  --co-danger-50: #fef2f2;
+  --co-danger-100: #fee2e2;
+  --co-danger-200: #fecaca;
+  --co-danger-500: #ef4444;
+  --co-danger-600: #dc2626;
+  --co-danger-700: #b91c1c;
+  --co-danger-800: #991b1b;
+
+  /* Info / Reference - Sky */
+  --co-info-50: #f0f9ff;
+  --co-info-100: #e0f2fe;
+  --co-info-500: #0ea5e9;
+  --co-info-600: #0284c7;
+  --co-info-700: #0369a1;
+
+  /* Typography Scale & Metrics */
+  --co-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --co-font-mono: 'JetBrains Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
+
+  --co-text-xs: 0.75rem;     /* 12px */
+  --co-text-sm: 0.875rem;    /* 14px */
+  --co-text-base: 1rem;      /* 16px */
+  --co-text-lg: 1.125rem;    /* 18px */
+  --co-text-xl: 1.25rem;     /* 20px */
+  --co-text-2xl: 1.5rem;     /* 24px */
+  --co-text-3xl: 1.875rem;   /* 30px */
+
+  /* Spacing Scale */
+  --co-space-1: 0.25rem;   /* 4px */
+  --co-space-2: 0.5rem;    /* 8px */
+  --co-space-3: 0.75rem;   /* 12px */
+  --co-space-4: 1rem;      /* 16px */
+  --co-space-5: 1.25rem;   /* 20px */
+  --co-space-6: 1.5rem;    /* 24px */
+  --co-space-8: 2rem;      /* 32px */
+  --co-space-10: 2.5rem;   /* 40px */
+  --co-space-12: 3rem;     /* 48px */
+
+  /* Border Radii */
+  --co-radius-xs: 4px;
+  --co-radius-sm: 6px;
+  --co-radius-md: 8px;
+  --co-radius-lg: 12px;
+  --co-radius-xl: 16px;
+  --co-radius-full: 9999px;
+
+  /* Layered Crisp Shadows (SaaS Elevation) */
+  --co-shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --co-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --co-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --co-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  --co-shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
+
+  /* Transitions */
+  --co-transition-instant: 100ms cubic-bezier(0.4, 0, 0.2, 1);
+  --co-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --co-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Semantic Theme Variables - Light Mode */
+  --co-bg-app: #f8fafc;
+  --co-bg-surface: #ffffff;
+  --co-bg-subtle: #f1f5f9;
+  --co-bg-muted: #e2e8f0;
+  --co-bg-overlay: rgba(15, 23, 42, 0.65);
+
+  --co-text-main: #0f172a;
+  --co-text-muted: #64748b;
+  --co-text-subtle: #94a3b8;
+  --co-text-inverse: #ffffff;
+
+  --co-border-subtle: #e2e8f0;
+  --co-border-strong: #cbd5e1;
+  --co-border-focus: #4f46e5;
+  --co-focus-ring: 0 0 0 2px var(--co-bg-surface), 0 0 0 4px var(--co-primary-500);
+}
+
+/* Dark Mode Theme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --co-bg-app: #080d1a;
+    --co-bg-surface: #0f172a;
+    --co-bg-subtle: #1e293b;
+    --co-bg-muted: #334155;
+    --co-bg-overlay: rgba(2, 6, 23, 0.85);
+
+    --co-text-main: #f8fafc;
+    --co-text-muted: #94a3b8;
+    --co-text-subtle: #64748b;
+    --co-text-inverse: #0f172a;
+
+    --co-border-subtle: #1e293b;
+    --co-border-strong: #334155;
+    --co-border-focus: #818cf8;
+    --co-focus-ring: 0 0 0 2px var(--co-bg-surface), 0 0 0 4px var(--co-primary-400);
+
+    /* Dark Mode Adjusted Shadows */
+    --co-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+    --co-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+    --co-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.45);
+    --co-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.55);
+
+    /* Dark mode pass background */
+    --co-pass-bg: #090e17;
+  }
+}
+
+/* Reduced Motion Override for Accessibility (WCAG 2.2.2) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

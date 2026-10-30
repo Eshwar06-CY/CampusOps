@@ -394,9 +394,12 @@ def start_task(
 
     # Caller must be an active assignee or authorized task manager
     is_assignee = any(
-        a.assignment_status == "active" and a.membership.user_id == user.id
+        a.assignment_status == "active"
+        and a.membership
+        and a.membership.membership_status == "active"
+        and a.membership.removed_at is None
+        and a.membership.user_id == user.id
         for a in task.assignees
-        if a.membership
     )
     if not is_assignee:
         require_permission(
@@ -488,7 +491,13 @@ def change_task_deadline(
 
     # Notify active assignees of deadline change
     for a in task.assignees:
-        if a.assignment_status == "active" and a.membership and a.membership.user:
+        if (
+            a.assignment_status == "active"
+            and a.membership
+            and a.membership.membership_status == "active"
+            and a.membership.removed_at is None
+            and a.membership.user
+        ):
             notif = Notification(
                 organization_id=task.organization_id,
                 user_id=a.membership.user_id,
@@ -526,7 +535,14 @@ def submit_task_evidence(
 
     # Caller must be an active assignee
     active_assignment = next(
-        (a for a in task.assignees if a.assignment_status == "active" and a.membership.user_id == user.id),
+        (
+            a for a in task.assignees
+            if a.assignment_status == "active"
+            and a.membership
+            and a.membership.membership_status == "active"
+            and a.membership.removed_at is None
+            and a.membership.user_id == user.id
+        ),
         None,
     )
     if not active_assignment:
@@ -1038,9 +1054,10 @@ def resolve_operational_blocker(
     blocker_id: uuid.UUID,
     resolution_note: str,
     status: str = "resolved",
+    organization_id: Optional[uuid.UUID] = None,
 ) -> OperationalBlocker:
     """Resolves an operational blocker with mandatory resolution note and actor audit."""
-    blocker = get_operational_blocker(db, blocker_id)
+    blocker = get_operational_blocker(db, blocker_id, organization_id=organization_id)
     if blocker.status in ("resolved", "wont_fix"):
         raise OperationalBlockerError(f"Blocker '{blocker_id}' is already in status '{blocker.status}'.")
 
@@ -1106,9 +1123,10 @@ def reopen_operational_blocker(
     user: UserProfile,
     blocker_id: uuid.UUID,
     reason: str,
+    organization_id: Optional[uuid.UUID] = None,
 ) -> OperationalBlocker:
     """Reopens a resolved or won't fix blocker."""
-    blocker = get_operational_blocker(db, blocker_id)
+    blocker = get_operational_blocker(db, blocker_id, organization_id=organization_id)
     if blocker.status not in ("resolved", "wont_fix"):
         raise OperationalBlockerError(f"Cannot reopen blocker currently in status '{blocker.status}'. Must be 'resolved' or 'wont_fix'.")
 
@@ -1393,9 +1411,10 @@ def update_operational_blocker(
     description: Optional[str] = None,
     priority: Optional[str] = None,
     owner_membership_id: Optional[uuid.UUID] = None,
+    organization_id: Optional[uuid.UUID] = None,
 ) -> OperationalBlocker:
     """Updates permitted fields on an open/in_progress operational blocker."""
-    blocker = get_operational_blocker(db, blocker_id)
+    blocker = get_operational_blocker(db, blocker_id, organization_id=organization_id)
     if blocker.status in ("resolved", "wont_fix"):
         raise OperationalBlockerError(f"Cannot update blocker in closed status '{blocker.status}'. Reopen it first.")
 

@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,17 +13,24 @@ from app.models.user import UserProfile
 from app.schemas.organization import (
     OrganizationCreateRequest,
     OrganizationDetailResponse,
+    OrganizationMemberResponse,
     OrganizationResponse,
     OrganizationVerificationResponse,
     OrganizationVerifyRequest,
 )
+from app.schemas.user import RoleSummaryResponse
 from app.services.errors import OrganizationVerificationError, PermissionDeniedError
 from app.services.organization import (
     create_organization,
     get_organization,
     verify_organization,
 )
-from app.services.permissions import is_active_platform_admin
+from app.services.permissions import (
+    ACTION_MANAGE_ROLES,
+    can_perform,
+    is_active_platform_admin,
+)
+from app.services.registration import mask_email
 
 router = APIRouter()
 
@@ -175,3 +182,112 @@ def verify_org(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err),
         )
+
+
+@router.get(
+    "/organizations/{organization_id}/members",
+    response_model=List[OrganizationMemberResponse],
+)
+def get_organization_members(
+    organization_id: uuid.UUID,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: UserProfile = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> List[OrganizationMemberResponse]:
+    """
+    Returns organization members with roles and privacy-aware contact disclosure.
+    - Tenant-isolated: only active members or platform administrators can query.
+    - Non-member access returns uniform 404.
+    - Role managers and platform admins view unmasked emails; others receive masked emails.
+    - Excludes credentials, tokens, hashes, and internal secrets.
+    """
+    org = db.get(Organization, organization_id)
+    if not org or org.archived_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found.",
+        )
+
+    is_platform = is_active_platform_admin(db, current_user.id)
+    caller_membership = db.execute(
+        select(OrganizationMembership).where(
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.user_id == current_user.id,
+            OrganizationMembership.membership_status == "active",
+            OrganizationMembership.removed_at == None,
+        )
+    ).scalar_one_or_none()
+
+    if not caller_membership and not is_platform:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found.",
+        )
+
+    # Privacy control: only workspace managers or platform admins view unmasked emails for other members
+    can_view_unmasked = is_platform or can_perform(
+        db=db,
+        user=current_user,
+        action=ACTION_MANAGE_ROLES,
+        organization_id=organization_id,
+        scope_type="organization",
+    )
+
+    stmt = (
+        select(OrganizationMembership)
+        .join(UserProfile, OrganizationMembership.user_id == UserProfile.id)
+        .where(OrganizationMembership.organization_id == organization_id)
+    )
+
+    if status_filter:
+        stmt = stmt.where(OrganizationMembership.membership_status == status_filter)
+    else:
+        # Default: active members (non-removed)
+        stmt = stmt.where(OrganizationMembership.removed_at == None)
+
+    stmt = stmt.order_by(OrganizationMembership.joined_at.asc()).offset(offset).limit(limit)
+    memberships = list(db.execute(stmt).scalars().all())
+
+    results: List[OrganizationMemberResponse] = []
+    for mem in memberships:
+        roles_stmt = select(RoleAssignment).where(
+            RoleAssignment.membership_id == mem.id,
+            RoleAssignment.revoked_at == None,
+        )
+        active_roles = list(db.execute(roles_stmt).scalars().all())
+        roles_data = [
+            RoleSummaryResponse(
+                id=r.id,
+                role_name=r.role_name,
+                scope_type=r.scope_type,
+                scope_id=r.scope_id,
+            )
+            for r in active_roles
+        ]
+
+        is_self = mem.user_id == current_user.id
+        raw_email = mem.user.email_normalized
+        if is_self or can_view_unmasked:
+            email = raw_email
+            is_masked = False
+        else:
+            email = mask_email(raw_email)
+            is_masked = True
+
+        results.append(
+            OrganizationMemberResponse(
+                id=mem.id,
+                organization_id=mem.organization_id,
+                user_id=mem.user_id,
+                display_name=mem.user.display_name,
+                email=email,
+                email_masked=is_masked,
+                membership_status=mem.membership_status,
+                joined_at=mem.joined_at,
+                roles=roles_data,
+            )
+        )
+
+    return results

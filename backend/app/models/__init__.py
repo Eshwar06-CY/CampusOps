@@ -1,6 +1,15 @@
 from app.models.event import Department, Event, EventLeadAssignment, Program
 from app.models.invitation import Invitation
 from app.models.organization import Organization, OrganizationMembership
+from app.models.registration import (
+    CheckIn,
+    CheckInCorrection,
+    EventRegistrationSettings,
+    Participant,
+    Registration,
+    RegistrationParticipant,
+    Ticket,
+)
 from app.models.role import PlatformAdmin, RoleAssignment
 from app.models.task import (
     EvidenceArtifact,
@@ -37,4 +46,11 @@ __all__ = [
     "OperationalBlocker",
     "OperationalBlockerHistory",
     "Notification",
+    "EventRegistrationSettings",
+    "Registration",
+    "Participant",
+    "RegistrationParticipant",
+    "Ticket",
+    "CheckIn",
+    "CheckInCorrection",
 ]

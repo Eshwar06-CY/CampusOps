@@ -332,3 +332,108 @@ def test_revoke_invitation_lifecycle(
     accept_resp = client.post("/api/v1/invitations/accept", json={"token": raw_token})
     assert accept_resp.status_code == 400
     assert "revoked" in accept_resp.json()["detail"].lower()
+
+
+def test_list_organization_invitations_authorization_and_privacy(
+    client: TestClient,
+    db,
+    create_synthetic_user,
+    create_synthetic_platform_admin,
+    auth_user,
+    test_email_sink,
+):
+    """
+    Verify GET /organizations/{id}/invitations:
+    - Fails closed with 401 when unauthenticated.
+    - Uniform 404 for non-members / non-existent organizations.
+    - Returns 403 for members without role management / invite permission.
+    - Returns 200 for Primary Admin / Office Bearer with non-secret metadata only.
+    - Excludes raw_token, token_hash, and internal secrets.
+    """
+    admin = create_synthetic_platform_admin("superadmin@campusops.internal")
+    creator = create_synthetic_user("owner@campus.edu", "Workspace Owner")
+    org = create_organization(db, creator=creator, college_name="Harvard", club_name="BioTech")
+    verify_organization(db, admin_user=admin, organization_id=org.id, decision="verified")
+
+    # Add Coordinator (lacks invite/role manage permission)
+    coord = create_synthetic_user("coord@campus.edu", "Coord User")
+    from app.models.organization import OrganizationMembership
+    from app.models.role import RoleAssignment
+    coord_m = OrganizationMembership(
+        organization_id=org.id,
+        user_id=coord.id,
+        membership_status="active",
+        created_by_user_id=creator.id,
+    )
+    db.add(coord_m)
+    db.flush()
+    db.add(
+        RoleAssignment(
+            membership_id=coord_m.id,
+            role_name="COORDINATOR",
+            scope_type="organization",
+            scope_id=None,
+            granted_by_user_id=creator.id,
+        )
+    )
+    db.commit()
+
+    # 1. Unauthenticated -> 401
+    resp_unauth = client.get(f"/api/v1/organizations/{org.id}/invitations")
+    assert resp_unauth.status_code == 401
+
+    # 2. Non-member -> 404
+    stranger = create_synthetic_user("stranger@other.edu", "Stranger")
+    auth_user(stranger)
+    resp_non_member = client.get(f"/api/v1/organizations/{org.id}/invitations")
+    assert resp_non_member.status_code == 404
+
+    # 3. Member lacking role manage authority -> 403
+    auth_user(coord)
+    resp_forbidden = client.get(f"/api/v1/organizations/{org.id}/invitations")
+    assert resp_forbidden.status_code == 403
+    assert "permission" in resp_forbidden.json()["detail"].lower()
+
+    # 4. Primary Admin creates invitations and lists them
+    auth_user(creator)
+    inv1 = client.post(
+        f"/api/v1/organizations/{org.id}/invitations",
+        json={"email": "member1@campus.edu", "role_name": "COORDINATOR", "scope_type": "organization"},
+    ).json()
+    inv2 = client.post(
+        f"/api/v1/organizations/{org.id}/invitations",
+        json={"email": "member2@campus.edu", "role_name": "OFFICE_BEARER", "scope_type": "organization"},
+    ).json()
+
+    resp_list = client.get(f"/api/v1/organizations/{org.id}/invitations")
+    assert resp_list.status_code == 200
+    data = resp_list.json()
+    assert len(data) == 2
+
+    # Verify no credential leakage in any item
+    for item in data:
+        assert "token" not in item
+        assert "token_hash" not in item
+        assert "raw_token" not in item
+        assert item["organization_id"] == str(org.id)
+
+    # Test status filtering
+    # Revoke inv1
+    client.post(f"/api/v1/organizations/{org.id}/invitations/{inv1['id']}/revoke")
+
+    resp_pending = client.get(f"/api/v1/organizations/{org.id}/invitations?status=pending")
+    assert resp_pending.status_code == 200
+    pending_items = resp_pending.json()
+    assert len(pending_items) == 1
+    assert pending_items[0]["id"] == inv2["id"]
+
+    resp_revoked = client.get(f"/api/v1/organizations/{org.id}/invitations?status=revoked")
+    assert resp_revoked.status_code == 200
+    revoked_items = resp_revoked.json()
+    assert len(revoked_items) == 1
+    assert revoked_items[0]["id"] == inv1["id"]
+
+    # Test pagination
+    resp_paged = client.get(f"/api/v1/organizations/{org.id}/invitations?limit=1&offset=0")
+    assert resp_paged.status_code == 200
+    assert len(resp_paged.json()) == 1
